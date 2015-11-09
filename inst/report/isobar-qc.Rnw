@@ -5,6 +5,7 @@
 suppressPackageStartupMessages(library(distr))
 suppressPackageStartupMessages(require(ggplot2))
 suppressPackageStartupMessages(library(isobar))
+suppressPackageStartupMessages(library(grid))
 suppressPackageStartupMessages(library(gridExtra))
 suppressPackageStartupMessages(library(plyr))
 options(encoding="UTF-8")  
@@ -246,8 +247,10 @@ tableGrob(ddply(quant.tbl,c('channels','class2','class1')[c('channels','class2',
                  function(x) c('number of ratios'=sum(!is.na(x$lratio)),
                                'significantly\ndownregulated'=sum(x$is.significant[x$lratio<0],na.rm=TRUE),
                                'significantly\nupregulated'=sum(x$is.significant[x$lratio>0],na.rm=TRUE))),
-           gpar.coretext = gpar(fontsize=9), gpar.coltext=gpar(fontsize=10), gpar.rowtext=gpar(fontsize=10)),
-ncol=1)
+          theme=ttheme_default(core=list(fg_params=list(fontsize=9)),
+                               colhead=list(fg_params=list(fontsize=10)),
+                               rowhead=list(fg_params=list(fontsize=10)))),
+          ncol=1)
 
 #width <- max(6.5,nrow(unique(quant.tbl[,c('r1','r2')])) * 2)
 #width<- 6.5
