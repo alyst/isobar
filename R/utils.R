@@ -254,6 +254,11 @@ number.ranges <- function(numbers) {
   if (sum(lr.cols) != sum(p.cols))
     stop("unequal number of '^lratio.' and '^p.value.rat' columns")
 
+  if (sum(p.cols)==1)
+    return(my.df[[which(p.cols)]])
+  else if (sum(p.cols)==0)
+    return(NULL)
+
   combined.p <- rep(1,nrow(my.df))
   signs.equal <- apply(sign(my.df[,lr.cols]),1,function(x) { y=x[!is.na(x)]; all(y==y[1])})
   ks <- apply(!is.na(my.df[,p.cols]),1,sum)
