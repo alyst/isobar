@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 # Mass spectrometry Perl program for extracting correct peptide matches from Phenyx pidres.xml files
 

@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 # Creation date : 2011-03-28
 # Last modified : Wed Nov 21 11:41:49 2012
 

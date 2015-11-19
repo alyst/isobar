@@ -1,3 +1,7 @@
+CHANGES IN VERSION 1.16.1
+ - use the default perl interpreter (the first found in $PATH) rather than /usr/bin/perl
+   for report generation
+
 CHANGES IN VERSION 1.13.0
 -------------------------
  - calcCumulativeProbXGreaterThanY() contributed by A. Stukalov, for calculating cummulative p-values with replicates
