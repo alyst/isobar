@@ -247,9 +247,9 @@ number.ranges <- function(numbers) {
   return(pchisq(-2*sum(log(p.values)),2*k,lower.tail=FALSE))
 }
 
-.combine.fisher.tblwide <- function(my.df) {
+.combine.fisher.tblwide <- function(my.df, p_val_regexp="^p\\.value\\.rat\\.") {
   lr.cols <- grepl("^lratio.",colnames(my.df))
-  p.cols <- grepl("^p.value.rat.",colnames(my.df)) & !grepl("adj",colnames(my.df))
+  p.cols <- grepl(p_val_regexp,colnames(my.df)) & !grepl("adj",colnames(my.df))
 
   if (sum(lr.cols) != sum(p.cols))
     stop("unequal number of '^lratio.' and '^p.value.rat' columns")
