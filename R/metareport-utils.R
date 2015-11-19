@@ -149,10 +149,20 @@ create.meta.reports <- function(properties.file="meta-properties.R",
                                      cols=c(ac.vars,merge.cols,"lratio","variance","p.value.rat"),
                                      merge.by=c(ac.vars,merge.cols),format=properties.env[["xls.report.format"]],
                                      fname=fname)
-  
-    zscore.any2.5 <- apply(abs(merged.table[,grepl("zscore.indiv",colnames(merged.table))]) >= properties.env[["zscore.threshold"]],1,any,na.rm=TRUE)
-    zscore.all1 <- apply(abs(merged.table[,grepl("zscore.indiv",colnames(merged.table))]) >= 1,1,all,na.rm=TRUE)
-
+    zscore_mask <- grepl("zscore.indiv",colnames(merged.table))
+    zscore.threshold <- properties.env[["zscore.threshold"]]
+    if (!is.numeric(zscore.threshold)) {
+      stop("Property `zscore.threshold` is not a number: ", zscore.threshold)
+    }
+    zscore.any2.5 <- abs(merged.table[,zscore_mask]) >= zscore.threshold
+    if (is.matrix(zscore.any2.5)) {
+      zscore.any2.5 <- apply(zscore.any2.5,1,any,na.rm=TRUE)
+    }
+    zscore.all1 <- abs(merged.table[,zscore_mask]) >= 1.0
+    if (is.matrix(zscore.all1)) {
+      zscore.all1 <- apply(zscore.all1,1,all,na.rm=TRUE)
+    }
+    
     merged.table$p.value.rat <- .combine.fisher.tblwide(merged.table)
     merged.table$is.significant.notadj <- (merged.table$p.value.rat < 0.05) & zscore.any2.5 & zscore.all1
 
@@ -161,7 +171,7 @@ create.meta.reports <- function(properties.file="meta-properties.R",
                                  cbind(x,p.value.rat.fdr.adj=p.adjust(x$p.value.rat,"fdr")))
     merged.table$is.significant <- (merged.table$p.value.rat.fdr.adj < 0.05) & zscore.any2.5 & zscore.all1  
   
-    merged.table$comp <- paste(merged.table[,merge.cols[2]],sep="/",merged.table[,merge.cols[1]])
+    merged.table$comp <- paste0(merged.table[[merge.cols[[2]]]],"/",merged.table[[merge.cols[[1]]]])
     merged.table
   })
   #merged.table$p.value.rat <- .combine.fisher.tblwide(merged.table)
@@ -201,14 +211,24 @@ create.meta.reports <- function(properties.file="meta-properties.R",
 
   if (format == "wide") {
     merged.table <- quant.tables[[1]]
-    for (idx in  2:length(samples)) {
+    for (idx in seq_along(samples[-1])) {
       merge.colnames <- intersect(merge.by,colnames(quant.tables[[idx]]))
 
       merged.table <- merge(merged.table,
                             quant.tables[[idx]],by=merge.colnames,all=TRUE)
     }
-    merged.table$lratio <- rowMeans(merged.table[,.grep_columns(merged.table,"lratio")],na.rm=TRUE)
-    merged.table$variance <- rowMeans(merged.table[,.grep_columns(merged.table,"variance")],na.rm=TRUE)
+    lratio_mask <- .grep_columns(merged.table,"lratio")
+    merged.table$lratio <- if (sum(lratio_mask) > 1) {
+      rowMeans(merged.table[,lratio_mask], na.rm=TRUE)
+    } else {
+      merged.table[,which(lratio_mask)]
+    }
+    var_mask <- .grep_columns(merged.table,"variance")
+    merged.table$variance <- if (sum(var_mask) > 1) {
+      rowMeans(merged.table[,var_mask], na.rm=TRUE)
+    } else {
+      merged.table[,which(var_mask)]
+    }
   } else {
     merged.table <- do.call(rbind,quant.tables)
   }
