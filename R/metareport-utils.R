@@ -146,7 +146,7 @@ create.meta.reports <- function(properties.file="meta-properties.R",
 
   res <- .create.or.load(name,properties.env,function() {
     merged.table <- .get.merged.table(properties.env$samples,
-                                     cols=c(ac.vars,merge.cols,"lratio","variance","p.value.rat"),
+                                     cols=c(ac.vars,merge.cols,"lratio","variance","p.value","p.value.rat"),
                                      merge.by=c(ac.vars,merge.cols),format=properties.env[["xls.report.format"]],
                                      fname=fname)
     zscore_mask <- grepl("zscore.indiv",colnames(merged.table))
@@ -162,14 +162,18 @@ create.meta.reports <- function(properties.file="meta-properties.R",
     if (is.matrix(zscore.all1)) {
       zscore.all1 <- apply(zscore.all1,1,all,na.rm=TRUE)
     }
-    
-    merged.table$p.value.rat <- .combine.fisher.tblwide(merged.table)
-    merged.table$is.significant.notadj <- (merged.table$p.value.rat < 0.05) & zscore.any2.5 & zscore.all1
+    # temporary rename p.value.rat to avoid "p.value" regexp clash
+    colnames(merged.table) <- gsub("p.value.rat", "p_value.rat", colnames(merged.table))
+    merged.table$p.value <- .combine.fisher.tblwide(merged.table, "^p\\.value")
+    merged.table$p_value.rat <- .combine.fisher.tblwide(merged.table, "^p_value\\.rat")
+    merged.table$is.significant.notadj <- (merged.table$p.value < 0.05) & zscore.any2.5 & zscore.all1
+    colnames(merged.table) <- gsub("p_value.rat", "p.value.rat", colnames(merged.table)) # revert to the p.value.rat
 
     #merged.table$p.value.rat.fdr.adj <- p.adjust(merged.table$p.value.rat)
     merged.table <- ddply(merged.table,c("class1","class2"),function(x) 
-                                 cbind(x,p.value.rat.fdr.adj=p.adjust(x$p.value.rat,"fdr")))
-    merged.table$is.significant <- (merged.table$p.value.rat.fdr.adj < 0.05) & zscore.any2.5 & zscore.all1  
+                                 cbind(x,p.value.fdr.adj=p.adjust(x$p.value,"fdr"),
+                                         p.value.rat.fdr.adj=p.adjust(x$p.value.rat,"fdr")))
+    merged.table$is.significant <- (merged.table$p.value.fdr.adj < 0.05) & zscore.any2.5 & zscore.all1  
   
     merged.table$comp <- paste0(merged.table[[merge.cols[[2]]]],"/",merged.table[[merge.cols[[1]]]])
     merged.table

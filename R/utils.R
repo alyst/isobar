@@ -247,7 +247,7 @@ number.ranges <- function(numbers) {
   return(pchisq(-2*sum(log(p.values)),2*k,lower.tail=FALSE))
 }
 
-.combine.fisher.tblwide <- function(my.df, p_val_regexp="^p\\.value\\.rat\\.") {
+.combine.fisher.tblwide <- function(my.df, p_val_regexp="^p\\.value\\.") {
   lr.cols <- grepl("^lratio.",colnames(my.df))
   p.cols <- grepl(p_val_regexp,colnames(my.df)) & !grepl("adj",colnames(my.df))
 
