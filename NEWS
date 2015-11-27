@@ -67,7 +67,7 @@ CHANGES IN VERSION 1.7.5
 CHANGES IN VERSION 1.7.4
 ------------------------
  - improved MSGF+ search result import
- - refactored report properties: all properties can now be defined in 
+ - refactored report properties: all properties can now be defined in
     in the properties.R
  - speed and memory usage improvements when creating wide XLS report
  - ratio p-value adjustment now works per comparision instead of globally
@@ -76,7 +76,7 @@ CHANGES IN VERSION 1.7.3
 ------------------------
  - fix wide XLS report format
  - novel plot for ratio combinations in QC report
-    showing individual ratio distributions and 
+    showing individual ratio distributions and
     significant ratios
 
 CHANGES IN VERSION 1.7.2
@@ -95,7 +95,7 @@ CHANGES IN VERSION 1.6.0
 
 CHANGES IN VERSION 1.5.3
 ------------------------
- - parallelization support! Set options(isobar.parallel=TRUE) and 
+ - parallelization support! Set options(isobar.parallel=TRUE) and
    register a cluster using registerDoMC or registerDoSNOW.
    Used when creating ratio tables.
 
@@ -109,7 +109,7 @@ CHANGES IN VERSION 1.5.2
 CHANGES IN VERSION 1.5.1
 ------------------------
  - added molecular weight correction to emPAI and dNSAF
- - added property 'ratiodistr.class.labels': biological variability can be 
+ - added property 'ratiodistr.class.labels': biological variability can be
    calculated in the report with other labels
  - improved PDF analysis report: added number of proteins in each section
  - added location scale family T distribution as biological variability
@@ -125,7 +125,7 @@ CHANGES IN VERSION 1.5
    - Quantification
      - All quantifications can be done now either on the protein level,
        peptide level, or modified peptide level. For modified peptide level,
-       supply a matrix with a 'peptide' and 'modif' column to the 
+       supply a matrix with a 'peptide' and 'modif' column to the
        appropriate functions.
      - Correction of peptide ratios with protein ratios is possible. Also
        the variance can be adjusted (assuming no or full correlation)
@@ -144,7 +144,7 @@ CHANGES IN VERSION 1.3.0
 CHANGES IN VERSION 1.1.3
 ------------------------
  - better matching of file patterns of peaklist and id in report
- - tab2xls improvements: 
+ - tab2xls improvements:
    - fix when there are cells with preceeding colons - would think they are cell properties
    - fix row limitation of 65536 - add new worksheet with remaining lines
  - re-added ibspiked_set2 dataset as the xz requirement allows for additional data
@@ -211,7 +211,7 @@ CHANGES IN VERSION 0.2.4
  - section 'Significantly regulated proteins' not shown anymore by default
    added property show.significant.proteins to reenable
  - added properties isotope.impurities and fragment.outlier.prob
- - bug fixes: 
+ - bug fixes:
    - naming not correct when class labels contain NAs
    - numeric class labels are not handled correctly
  - added naRegion to noise model
@@ -232,8 +232,8 @@ CHANGES IN VERSION 0.2.2
 
  - re-added ratio vs intensity plot in QC report
  - issue warning when summarize property is incorrectly defined
- - create cachedir if it does not exist 
- - estimateRatio.group_specific_proteins renamed to quant.w.grouppeptides 
+ - create cachedir if it does not exist
+ - estimateRatio.group_specific_proteins renamed to quant.w.grouppeptides
  - sanitize analysisname, uniprotlink, and subsection names for LaTeX
  - use fancyhdr instead of fanctheadings
  - added argument require.reporter.specific to reporterProteins

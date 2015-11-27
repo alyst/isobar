@@ -12,7 +12,7 @@ setClass("TlsParameter",
 setClass("Tlsd",
           prototype = prototype(
                       r = function(n) { rt(n, df)*scale + location },
-                      d = function(x, log = FALSE){ 
+                      d = function(x, log = FALSE){
                             1/scale * dt((x - location)/scale, df, log = log) },
                       p = function(q, lower.tail = TRUE, log.p = FALSE ){
                             pt((x - location)/scale, df,lower.tail=lower.tail,log.p=log.p)},
@@ -39,16 +39,16 @@ setMethod("initialize", "Tlsd",
             .Object@d <- function(x, log = FALSE){}
             .Object@p <- function(q, lower.tail = TRUE, log.p = FALSE){}
             .Object@q <- function(p, lower.tail = TRUE, log.p = FALSE){}
-            
-            rtls = function(n,df,location,scale) rt(n, df)*scale + location 
+
+            rtls = function(n,df,location,scale) rt(n, df)*scale + location
             dtls = function(x,df,location,scale,log = FALSE)
-                     1/scale * dt((x - location)/scale, df, log = log) 
+                     1/scale * dt((x - location)/scale, df, log = log)
             ptls = function(q,df,location,scale,lower.tail = TRUE, log.p = FALSE )
-                     pt((q - location)/scale, df,lower.tail=lower.tail,log.p=log.p) 
-                     
+                     pt((q - location)/scale, df,lower.tail=lower.tail,log.p=log.p)
+
             qtls = function(p,df,location,scale, lower.tail = TRUE, log.p = FALSE )
                             qt(p, df,lower.tail=lower.tail,log.p=log.p)*scale + location
-                            
+
             body(.Object@r) <- substitute(
                            { rtls(n, df=dfSub,location=locationSub,scale=scaleSub) },
                              list(dfSub = df,
@@ -114,7 +114,7 @@ setMethod("df", "Tlsd", function(x, ...) df(param(x)))
 setMethod("location", "Tlsd", function(object) location(param(object)))
 setMethod("scale", "Tlsd",
            function(x, center = TRUE, scale = TRUE) scale(param(x)))
-           ### odd arg-list due to existing function in base package 
+           ### odd arg-list due to existing function in base package
 
 
 ## wrapped replace methods

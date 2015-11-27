@@ -1,11 +1,10 @@
 
 testPdflatex <- function(pdflatex.cmd) {
-  if (system(pdflatex.cmd) != 0) 
+  if (system(pdflatex.cmd) != 0)
     stop("pdflatex does not seem to be installed. ",
          "Install LaTeX using the TeXLive or MiKTex distribution to generate ",
          "PDF reports with isobar. Set 'write.qc.report=FALSE' and 'write.report=FALSE', otherwise.")
 }
-    
 
 create.reports <- function(properties.file="properties.R",
                            global.properties.file=system.file("report","properties.R",package="isobar"),
@@ -32,7 +31,7 @@ create.reports <- function(properties.file="properties.R",
     write.xls.report(properties.env,report.env)
     zip.files <- c(zip.files,"isobar-analysis.xls")
   }
- 
+
   ## generate Latex/Sweave report
   if(property('write.qc.report',properties.env)) {
     message("Weaving isobar-qc report")
@@ -45,7 +44,7 @@ create.reports <- function(properties.file="properties.R",
     }
 
     zip.files <- c(zip.files,sprintf("%s.tex",qc.name))
-    if (properties.env[["compile"]]) 
+    if (properties.env[["compile"]])
       zip.files <- .compile.tex(qc.name,zip.files)
   }
 
@@ -77,14 +76,14 @@ create.reports <- function(properties.file="properties.R",
     message("Created zip archive ",zip.f)
   }
 
-  options(ow) 
+  options(ow)
   message("\nSUCCESSFULLY CREATED REPORTS\n")
 }
 
   .compile.tex <- function(name,zip.files) {
     r.cmd = shQuote(file.path(R.home("bin"),"R"))
     testPdflatex(paste(r.cmd,"CMD","pdflatex -version"))
-    
+
     dir <- tempdir()
     cat("compiling ",name,".tex ...  1",sep="")
     .call.cmd(sprintf("%s CMD pdflatex -halt-on-error -output-directory=%s %s.tex",r.cmd,dir,name),
@@ -97,7 +96,7 @@ create.reports <- function(properties.file="properties.R",
     file.remove(file.path(dir,paste0(name,".pdf")))
     c(zip.files,sprintf("%s.pdf",name))
   }
- 
+
 #- load properties
 
 load.properties <- function(properties.file="properties.R",
@@ -123,7 +122,7 @@ load.properties <- function(properties.file="properties.R",
   } else {
     message("  No local properties file.")
   }
-  
+
   ## command argument parsing
   tmp.properties.env <- new.env()
   if (length(args) > 0)
@@ -134,7 +133,7 @@ load.properties <- function(properties.file="properties.R",
       arg.n.val <- strsplit(substring(arg,3),"=")[[1]]
       if (length(arg.n.val) == 1)
         tmp.properties.env[[arg.n.val]] <- TRUE
-      else if (length(arg.n.val) == 2) 
+      else if (length(arg.n.val) == 2)
         tmp.properties.env[[arg.n.val[1]]] <- switch(arg.n.val[2],'TRUE'=TRUE,'FALSE'=FALSE,arg.n.val[2])
       else
         stop("Could not parse command line argument ",arg)
@@ -176,9 +175,9 @@ initialize.env <- function(env,properties.env) {
     env[["ibspectra"]] <- .create.or.load.ibspectra(properties.env)
     save(list='ibspectra',envir=env,file=ib.name)
   }
-  if ("site.probs" %in% colnames(fData(env[["ibspectra"]])) 
+  if ("site.probs" %in% colnames(fData(env[["ibspectra"]]))
       && ! "pep.siteprobs" %in% colnames(fData(env[["ibspectra"]])))
-    fData(env[["ibspectra"]])$pep.siteprobs <- 
+    fData(env[["ibspectra"]])$pep.siteprobs <-
       .convertPhosphoRSPepProb(fData(env[["ibspectra"]])[,'peptide'],fData(env[["ibspectra"]])[,'site.probs'],
                                round.to.frac=20)
 
@@ -188,7 +187,7 @@ initialize.env <- function(env,properties.env) {
   if (identical(properties.env[["report.level"]],"peptide") ) {
     env[["ptm.info"]]  <- .create.or.load.ptm.info(properties.env,proteinGroup(env[["ibspectra"]]))
     if (all(c('use.for.quant','pep.siteprobs') %in% colnames(fData(env[['ibspectra']]))) && !all(fData(env[['ibspectra']])[['use.for.quant']]))
-      env[["quant.tbl.notlocalized"]] <- 
+      env[["quant.tbl.notlocalized"]] <-
         .create.or.load.quant.table(env,properties.env,name="quant.tbl.notlocalized",type="other-sites")
   }
   env[["quant.tbl"]] <- .create.or.load.quant.table(env,properties.env)
@@ -201,11 +200,11 @@ initialize.env <- function(env,properties.env) {
 
   if (property('write.xls.report',properties.env)) {
     xls.table.name <- paste0("xls.quant.tbl.",properties.env[["xls.report.format"]])
-    env[["xls.quant.tbl"]] <- 
+    env[["xls.quant.tbl"]] <-
       .create.or.load.xls.quant.tbl(env,properties.env,xls.table.name,"quant.tbl")
     if (exists("quant.tbl.notlocalized",envir=env)) {
       xls.ntable.name <- paste0("xls.quant.tbl.notlocalized.",properties.env[["xls.report.format"]])
-      env[["xls.quant.tbl.notlocalized"]] <- 
+      env[["xls.quant.tbl.notlocalized"]] <-
         .create.or.load.xls.quant.tbl(env,properties.env,xls.ntable.name,"quant.tbl.notlocalized")
     }
   }
@@ -262,11 +261,11 @@ initialize.env <- function(env,properties.env) {
 
   return(x)
 }
- 
+
 .get.property <- function(x,envir) get(x,envir=envir,inherits=FALSE)
 
 property <- function(x, envir, null.ok=TRUE,class=NULL) {
-  if (!.exists.property(x,envir)) 
+  if (!.exists.property(x,envir))
     stop("property ",x," does not exist!")
 
   o <- get(x,envir=envir,inherits=FALSE)
@@ -280,7 +279,7 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
   return(o)
 }
 
-.exists.property <- function(x,envir,null.ok=TRUE) 
+.exists.property <- function(x,envir,null.ok=TRUE)
   exists(x,envir=envir,inherits=FALSE) &&
     (null.ok || !is.null(.get.property(x,envir)))
 
@@ -294,11 +293,11 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
   does.not.exist <- !exists(x,envir=envir,inherits=inherits,...)
   is.null.p <- does.not.exist || is.null(.get.property(x,envir=envir))
   length.0 <- does.not.exist || length(.get.property(x,envir=envir))==0
-  if (does.not.exist || is.null.p || length.0) 
+  if (does.not.exist || is.null.p || length.0)
     stop ("  property '",x,"' not defined or did not evaluate in the properties file, but it is required",
           ifelse(is.null(valid),"",paste(" to be one of \n\t",paste(valid,collapse="\n\t"),
           sep="")),def)
-  
+
   if (check.file && !file.exists(.get.property(x,envir=envir)))
     stop("  property '",x,"' should be assigned to a file, but it is not:",def)
 
@@ -425,7 +424,7 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
 
   if (!is.null(property('protein.info.f',properties.env)))
     tryCatch({
-    proteinInfo(proteinGroup(ibspectra)) <- 
+    proteinInfo(proteinGroup(ibspectra)) <-
       .create.or.load("protein.info",envir=properties.env,
                       f=property('protein.info.f',properties.env),
                       x=proteinGroup(ibspectra),
@@ -433,18 +432,18 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
                       error=warning,default.value=proteinInfo(proteinGroup(ibspectra)))
     },error=function(e) stop("Error creating proteinInfo using function defined in [protein.info.f]: ",e,"Set protein.info.f to NULL if you want to create a report anyway."))
 
-  if ("site.probs" %in% colnames(fData(ibspectra)) 
+  if ("site.probs" %in% colnames(fData(ibspectra))
       && ! "pep.siteprobs" %in% colnames(fData(ibspectra)))
-     fData(ibspectra)$pep.siteprobs <- 
+     fData(ibspectra)$pep.siteprobs <-
         .convertPhosphoRSPepProb(fData(ibspectra)[,'peptide'],fData(ibspectra)[,'site.probs'],
                                  round.to.frac=20)
- 
+
   return(ibspectra)
 }
 
 .create.or.load.noise.model <- function(env,properties.env) {
   noise.model.channels <- .get.property("noise.model.channels",properties.env)
-  if (is.null(noise.model.channels)) 
+  if (is.null(noise.model.channels))
     noise.model.channels <- reporterTagNames(env[["ibspectra"]])[!is.na(classLabels(env[["ibspectra"]]))]
   is.one.to.one <- isTRUE(.get.property("noise.model.is.technicalreplicates",properties.env))
 
@@ -467,7 +466,7 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
 }
 
 .create.or.load.ptm.info <- function(properties.env,protein.group) {
-  if (is.null(property('ptm.info.f',properties.env))) 
+  if (is.null(property('ptm.info.f',properties.env)))
     properties.env[["ptm.info.f"]] <- getPtmInfoFromNextprot
 
   return(.create.or.load("ptm.info",envir=properties.env,
@@ -476,7 +475,7 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
 }
 
 .create.or.load.ratiodistr <- function(env,properties.env) {
-  
+
   return(.create.or.load("ratiodistr",envir=properties.env,class="Distribution",
                          msg.f="biological variability ratio distribution",f=function(){
 
@@ -486,7 +485,7 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
 
     ratios.for.distr.fitting <- .create.or.load.ratiodistr.ratios(env,properties.env,cl)
 
-    if (all(is.na(ratios.for.distr.fitting[,'lratio']))) 
+    if (all(is.na(ratios.for.distr.fitting[,'lratio'])))
       stop("All ratios for distr fitting are NA - are the correct class labels used?")
 
     if (!is.function(property('ratiodistr.fitting.f',properties.env)))
@@ -502,8 +501,8 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
 }
 
 .round.distr <- function(distr,digits) {
-  for (s in slotNames(param(distr))) 
-    if (s != "name" && is.numeric(slot(param(distr),s))) 
+  for (s in slotNames(param(distr)))
+    if (s != "name" && is.numeric(slot(param(distr),s)))
       slot(distr@param,s) <- round(slot(param(distr),s),digits)
   distr
 }
@@ -554,7 +553,7 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
   protein.group <- proteinGroup(env[["ibspectra"]])
   protein.info <- proteinInfo(protein.group)
   isoforms <- protein.group@isoformToGeneProduct
-  
+
   .create.or.load(name,envir=properties.env,class="data.frame",
                   msg.f=paste("table of ratios of",properties.env[["report.level"]],"as",name),f=function() {
     if (!is.null(property('ratios.opts',properties.env)$summarize)) {
@@ -578,7 +577,7 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
     set.ratioopts(name="ibspectra",env[["ibspectra"]])
     set.ratioopts(name="noise.model",env[["noise.model"]])
     set.ratioopts(name="ratiodistr",env[["ratiodistr"]])
-    
+
     if(identical(properties.env[["report.level"]],"peptide")) {
       if (!"use.for.quant" %in% colnames(fData(env[["ibspectra"]])))
         fData(env[["ibspectra"]])[["use.for.quant"]] <- TRUE
@@ -603,7 +602,7 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
       stop("don't known level ",properties.env[["report.level"]])
     }
 
-    if (is.null(property('cmbn',properties.env)) & 
+    if (is.null(property('cmbn',properties.env)) &
 	!is.null(property('vs.class',properties.env)))
       properties.env[["cmbn"]] <- combn.matrix(reporterTagNames(env[["ibspectra"]]),
 					   "versus.class",
@@ -636,10 +635,10 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
     quant.tbl <- do.call("proteinRatios",ratios.opts)
 
     quant.tbl[,"sd"] <- sqrt(quant.tbl[,"variance"])
-    
+
 #    quant.tbl$sign.string <- "not significant"
 #    quant.tbl$sign.string[quant.tbl$is.significant] <- "is significant"
-    
+
 #    if (length(property('preselected',properties.env)) > 0) {
 #      preselected <- unique(ip[sub("-.*","",names(ip)) %in% property('preselected',properties.env)])
 #      quant.tbl$is.preselected <- quant.tbl$protein %in% preselected
@@ -663,7 +662,7 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
       quant.tbl <- quant.tbl[order(sort.genenames,quant.tbl[,"r1"],quant.tbl[,"r2"]),]
       quant.tbl[,"group"] <- as.numeric(factor(quant.tbl[,"ac"],levels=unique(quant.tbl[,"ac"])))
     }
-  
+
     if (all(is.na(quant.tbl[["lratio"]])))
       stop("All ratios are NA")
 
@@ -676,20 +675,20 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
                   f=function() {
 
     protein.groupnames <-unique(env[["quant.tbl"]][,"ac"])
-    ## if (is.null(protein.info)) { stop("protein info is null!")}                
-    my.protein.infos <- llply(protein.groupnames, .do.create.protein.info, protein.group=proteinGroup(env[["ibspectra"]]), 
+    ## if (is.null(protein.info)) { stop("protein info is null!")}
+    my.protein.infos <- llply(protein.groupnames, .do.create.protein.info, protein.group=proteinGroup(env[["ibspectra"]]),
                               .parallel=isTRUE(getOption('isobar.parallel')))
     #my.protein.infos <- lapply(protein.groupnames, .do.create.protein.info, protein.group=protein.group)
     names(my.protein.infos) <- protein.groupnames
     return(my.protein.infos)
   })
 }
-  
+
 .do.create.protein.info <- function(x,protein.group) {
     protein.group.table <- proteinGroupTable(protein.group)
       allgroupmember <- indistinguishableProteins(protein.group, protein.g =
                                                   protein.group.table[protein.group.table[,'reporter.protein'] %in% x,"protein.g"])
-     
+
       reporter.protein.info <- my.protein.info(protein.group,x)
       collapsed.gene_name <- human.protein.names(reporter.protein.info)
       peptides <- peptides(protein.group,protein=x,do.warn=FALSE)
@@ -698,11 +697,11 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
       peptides.rs <- peptides(protein.group,protein=x,
                               specificity=REPORTERSPECIFIC,do.warn=FALSE)
       n.spectra <- length(names(spectrumToPeptide(protein.group))[spectrumToPeptide(protein.group)%in%peptides])
-      
+
       tbl.protein.name <- sort(collapsed.gene_name[,'protein_name'])[1];
       if (length(unique(collapsed.gene_name[,'protein_name'])) > 1)
         tbl.protein.name <- paste(tbl.protein.name,", ...",sep="")
-      
+
       list(n.reporter = nrow(reporter.protein.info),
            n.groupmember = length(allgroupmember),
            reporter.protein.info = reporter.protein.info,
@@ -743,12 +742,9 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
            "Call script with --help for usage details.\n\n",
            "Available properties:\n",
            "\t",paste(ls(envir=parentenv),collapse="\n\t"),"\n")
-                      
+
       ## more verbose list:
       ##cat(paste(unlist(lapply(objects(),function(o) {sprintf("%s [%s]",o,class(get(o)))})),collapse="\n\t"))
     }
   }
 }
-
-
-

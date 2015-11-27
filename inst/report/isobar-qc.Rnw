@@ -8,10 +8,10 @@ suppressPackageStartupMessages(library(isobar))
 suppressPackageStartupMessages(library(grid))
 suppressPackageStartupMessages(library(gridExtra))
 suppressPackageStartupMessages(library(plyr))
-options(encoding="UTF-8")  
+options(encoding="UTF-8")
 pdf.options(pointsize=6)
 
-load.tex.properties(.GlobalEnv) # loads environments 
+load.tex.properties(.GlobalEnv) # loads environments
 n.tags <- length(reporterTagNames(ibspectra))
 @
 
@@ -88,7 +88,7 @@ if (is.null(ri.nn)) {
        
        ")
 }
-@ 
+@
 
 \begin{minipage}[c]{0.4\textwidth}
 <<fig-reporterIntensityPlot,fig=T,echo=F,width=2.5,height=2.3,results=hide>>=
@@ -99,7 +99,7 @@ if (is.null(ri.nn)) {
 \begin{minipage}[c]{0.6\textwidth}
 \vspace{0pt} \small
 <<normalization factors,echo=FALSE,results=tex,strip.white=false>>=
-if (is.null(ri.nn)) { 
+if (is.null(ri.nn)) {
    cat("\\begin{tabular}{rrrr}\n",
        paste("","",
              "\\multicolumn{2}{c}{intensites}",sep=" & "),"\\\\",
@@ -112,7 +112,7 @@ if (is.null(ri.nn)) {
        paste(names(n.factors),
              sprintf("%.2f",100*colSums(is.na(ri))/nrow(ri)),
              sprintf("%.2f",apply(ri,2,median,na.rm=TRUE)),
-             sprintf("%.2f",colMeans(ri,na.rm=TRUE)),             
+             sprintf("%.2f",colMeans(ri,na.rm=TRUE)),
              sep=" & ",collapse="\\\\ \n"),
        "\\end{tabular}",sep="\n")
 
@@ -135,18 +135,18 @@ if (is.null(ri.nn)) {
              sprintf("%.2f",100*colSums(is.na(ri.nn))/nrow(ri.nn)),
              sprintf("%.1f",colMeans(ri.nn,na.rm=TRUE)),
              sprintf("%.1f",apply(ri.nn,2,median,na.rm=TRUE)),
-             sprintf("%.1f",colMeans(ri,na.rm=TRUE)),             
+             sprintf("%.1f",colMeans(ri,na.rm=TRUE)),
              sprintf("%.1f",apply(ri,2,median,na.rm=TRUE)),
              n.factors,sep=" & ",collapse="\\\\ \n"),
        "\\end{tabular}",sep="\n")
-   
+
 }
 @
 \normalsize
 \end{minipage}
 
 \subsection*{Ratio Distribution}
-Distribution of the computed protein ratios (bars) and the probability density function of 
+Distribution of the computed protein ratios (bars) and the probability density function of
 a \Sexpr{class(ratiodistr)}  distribution (solid line) fitted as described below.
 
 \begin{minipage}{0.45\textwidth}
@@ -190,7 +190,7 @@ if (!is.null(ratiodistr)) {
      tagNames <- attr(ratiodistr,"tagNames")
 
      cat("Distribution calculated on \\emph{",m,"} ratios",sep="")
-     classTxt <- sapply(names(t),function(class) 
+     classTxt <- sapply(names(t),function(class)
                         sprintf("\\emph{%s} (tags %s)",class,
                                 paste(tagNames[!is.na(classLabels) & classLabels==class],collapse=", ")))
      if (m == "intraclass") {
@@ -219,7 +219,7 @@ if (!is.null(ratiodistr)) {
 \subsection*{Individual Ratio Distributions}
 
 <<reporter-intensities-2,fig=TRUE,width=6.5,height=4.5,echo=F,results=hide>>=
-if (all(c("class1","class2") %in% colnames(quant.tbl)) && 
+if (all(c("class1","class2") %in% colnames(quant.tbl)) &&
     (!all(quant.tbl[,'class1']==quant.tbl[,'r1']))) {
   quant.tbl$comp <- sprintf("%s [%s] /\n %s [%s]",
                             quant.tbl$r2,quant.tbl$class2,
@@ -256,7 +256,7 @@ tableGrob(ddply(quant.tbl,c('channels','class2','class1')[c('channels','class2',
 #width<- 6.5
 #pdf("reporter-intensities-2.pdf",width=width,height=4.5)
 #print(gg)
-#dev.off()   
+#dev.off()
 @
 %\includegraphics{reporter-intensities-2}
 

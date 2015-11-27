@@ -1,7 +1,7 @@
 ##
 ## Isobar properties.R file
 ##     for automatic report generation
-## 
+##
 ## It is standard R code and parsed using sys.source
 
 #####################################################################
@@ -32,7 +32,7 @@ author=paste0("isobar R package v",packageDescription("isobar")$Version)
 ##   - can be a data.frame (e.g. ibspectra=as.data.frame(ibspiked_set1) )
 ##   - if it is a character string, it is assumed to be a file
 ##     - if it ends on .rda, then it is assumed to be a R data object
-##     - if it does not exists, then it is may generated based on 
+##     - if it does not exists, then it is may generated based on
 ##        the peaklist and identifications properties
 ibspectra=paste(name,"ibspectra.csv",sep=".")
 
@@ -64,7 +64,7 @@ identifications=list.files(pattern="*\\.id.csv$")
 ## mapping files, for data quantified and identified with different but
 ## correspoding spectra. For example corresponding HCD-CID files.
 
-## masses and intensities which are outside of the 'true' tag mass 
+## masses and intensities which are outside of the 'true' tag mass
 ## +/- fragment.precision/2 are discarded
 fragment.precision=0.01
 ## filter mass outliers
@@ -83,7 +83,7 @@ readIBSpectra.args = list(
 
 normalize=TRUE
 # if defined, normalize.factors will be used for normalization
-normalize.factors=NULL 
+normalize.factors=NULL
 normalize.channels=NULL
 normalize.use.protein=NULL
 normalize.exclude.protein=NULL
@@ -102,8 +102,8 @@ noise.model=noise.model.hcd
 ## the file
 # noise.model="noise.model.rda"
 
-## Define channels for creation of a noise model, ideally a set of 
-##  channels which are technical replicates. 
+## Define channels for creation of a noise model, ideally a set of
+##  channels which are technical replicates.
 noise.model.channels=NULL
 
 ## If noise.model.is.technicalreplicates is FALSE, the intensities
@@ -116,8 +116,8 @@ noise.model.minspectra=50
 ## class labels. Must by of type character and of same length as
 ## number of channels I. e. 4 for iTRAQ 4plex, 6 for TMT 6plex Example
 ## for iTRAQ 4plex:
-## Class definitions of the isobaric tag channels. 
-## A character vector with the same length as channels 
+## Class definitions of the isobaric tag channels.
+## A character vector with the same length as channels
 ##   (e.g. 4 for iTRAQ 4plex, 6 for TMT 6plex)
 ## Example for iTRAQ 4plex:
 # class.labels=as.character(c(1,0,0,0))
@@ -227,7 +227,7 @@ peptide.protein.correlation <- 0
 compare.to.quant <- NULL
 
 #####################################################################
-## Report properties 
+## Report properties
 
 write.qc.report=TRUE
 write.report=TRUE
@@ -261,9 +261,9 @@ spreadsheet.format="xlsx"
 xls.report.format="long"
 
 ## XLS report columns in quantification tab
-##  possible values: ratio, is.significant, CI95.lower, CI95.upper, 
+##  possible values: ratio, is.significant, CI95.lower, CI95.upper,
 ##                   ratio.minus.sd, ratio.plus.sd,
-##                   p.value.ratio, p.value.sample, n.na1, n.na2, 
+##                   p.value.ratio, p.value.sample, n.na1, n.na2,
 ##                   log10.ratio, log10.variance,
 ##                   log2.ratio, log2.variance
 ##  only for summarize=TRUE: n.pos, n.neg

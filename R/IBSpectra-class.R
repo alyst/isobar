@@ -13,7 +13,7 @@ setClass("IBSpectra",
              isotopeImpurities ="matrix",
              log = "matrix",
              "VIRTUAL"),
-         prototype = 
+         prototype =
             prototype(log=matrix(c(format(Sys.time(), "%F %T %Z"),"IBSpectra Log"),
                                  ncol=2,
                                  dimnames=list("init",c("Timestamp","Message"))))
@@ -100,7 +100,7 @@ setClass("TMT10plexSpectra",
 
 .valid.IBSpectra.slots <- function(object) {
     n <- length(object@reporterTagNames)
-    if (length(object@reporterTagMasses) != n) 
+    if (length(object@reporterTagMasses) != n)
         stop("[IBSpectra: validation] Slot reportMasses [",length(object@reporterTagMasses),"]",
              " has not the same length as reporterTagNames [",n,"]!")
 
@@ -109,7 +109,7 @@ setClass("TMT10plexSpectra",
              paste(dim(object@isotopeImpurities),collapse="x"),"!",
              " Expected is ",n,"x",n,". Set it to diag(",n,") when no known.")
 
-       if (length(classLabels(object)) > 0 && length(classLabels(object)) != n) 
+       if (length(classLabels(object)) > 0 && length(classLabels(object)) != n)
         stop("[IBSpectra: validation] Slot classLabels [",length(classLabels(object)),"]",
              " has not the same length as reporterTagNames [",n,"]!")
 
@@ -281,7 +281,7 @@ ibSpectra.as.concise.data.frame  <- function(from) {
   res.nice[order(res$AC,res$Sequence,res$modif),]
 }
 
-setMethod("as.data.frame",signature(x="IBSpectra"), 
+setMethod("as.data.frame",signature(x="IBSpectra"),
 		function(x, row.names=NULL, optional=FALSE, ...) as(x,"data.frame"))
 
 as.data.frame.IBSpectra <- function(x,...) as(x,"data.frame")
@@ -291,7 +291,7 @@ as.data.frame.IBSpectra <- function(x,...) as(x,"data.frame")
 ### Accessor-like methods.
 ###
 
-IBSpectraTypes <- function() { 
+IBSpectraTypes <- function() {
   unlist(sapply(
           names(getClass("IBSpectra")@subclasses),
           function(c) { if (!isVirtualClass(c)) c; } )
@@ -404,7 +404,7 @@ setMethod("spectrumSel",signature(x="IBSpectra",peptide="matrix",protein="missin
           warning("0L peptide provided")
           return(FALSE)
         }
-        
+
         if (is.null(colnames(peptide)))
           stop("a matrix argument with colnames is needed for peptide")
 
@@ -414,12 +414,12 @@ setMethod("spectrumSel",signature(x="IBSpectra",peptide="matrix",protein="missin
         }
 
         sel <- rep(TRUE,nrow(fData(x)))
-        for (p.i in colnames(peptide)) 
+        for (p.i in colnames(peptide))
           sel <- sel & fData(x)[[p.i]] %in% peptide[,p.i]
 
         if (use.for.quant.only && .SPECTRUM.COLS['USEFORQUANT'] %in% colnames(fData(x)))
-          sel <- sel & fData(x)[,.SPECTRUM.COLS['USEFORQUANT']] 
-        
+          sel <- sel & fData(x)[,.SPECTRUM.COLS['USEFORQUANT']]
+
         for (m in modif)
           sel <- sel & grepl(m,fData(x)[,.SPECTRUM.COLS['MODIFSTRING']])
 
@@ -454,7 +454,7 @@ setMethod("spectrumSel",signature(x="IBSpectra",peptide="character",protein="mis
 setMethod("spectrumSel",signature(x="IBSpectra",peptide="missing",protein="character"),
     function(x,protein,specificity=REPORTERSPECIFIC,modif=NULL,spectrum.titles=FALSE,use.for.quant.only=TRUE,
              do.warn=TRUE,...) {
-      
+
       peptides <- peptides(x=proteinGroup(x),protein=protein,specificity=specificity,do.warn=do.warn,...)
       if (length(peptides) == 0)
         return(FALSE)
@@ -468,7 +468,7 @@ setMethod("spectrumSel",signature(x="IBSpectra",peptide="missing",protein="chara
 )
 
 setGeneric("spectrumTitles", function(x,...) standardGeneric("spectrumTitles"))
-setMethod("spectrumTitles","IBSpectra",function(x,...) 
+setMethod("spectrumTitles","IBSpectra",function(x,...)
     function(x) fData(x)[spectrumSel(x,...),.SPECTRUM.COLS['SPECTRUM']])
 
 #setMethod("reporterTagNames","IBSpectra",function(x) x@reporterTagNames)
@@ -476,7 +476,7 @@ setMethod("spectrumTitles","IBSpectra",function(x,...)
 setGeneric("classLabels", function(x) standardGeneric("classLabels"))
 setGeneric("classLabels<-", function(x,value) standardGeneric("classLabels<-"))
 
-setMethod("classLabels",signature(x="IBSpectra"), 
+setMethod("classLabels",signature(x="IBSpectra"),
     function(x) {
       class.labels <- phenoData(x)[["class.labels"]]
       names(class.labels) <- phenoData(x)[["class.label.description"]]
@@ -485,7 +485,7 @@ setMethod("classLabels",signature(x="IBSpectra"),
 )
 setReplaceMethod("classLabels","IBSpectra",
     function(x,value) {
-      
+
       if (length(value) != length(reporterTagNames(x)))
         stop("Class labels [",length(value),"] need to habe the same length as reporterTagNames [",length(reporterTagNames(x)),"]")
 
@@ -504,7 +504,7 @@ setReplaceMethod("classLabels","IBSpectra",
 
 
 ### - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-### correctIsotopeImpurities, normalize, 
+### correctIsotopeImpurities, normalize,
 ### substractAdditiveNoise and exclude methods.
 ###
 
@@ -517,11 +517,11 @@ setGeneric("exclude",
 
 setMethod("correctIsotopeImpurities",signature(x="IBSpectra"),
     function(x) {
-      
+
       if (is.logged(x,"isotopeImpurities.corrected")) {
         warning("isotope impurities have been corrected already.");
       }
-      
+
       ri <- reporterIntensities(x)
       AA <- isotopeImpurities(x)
       ri.corrected <- t(apply(ri,1,function(b) {
@@ -549,11 +549,11 @@ normalize <- function(x,f=median,target="intensity",
                       f.doapply=TRUE,log=TRUE,
                       channels=NULL,na.rm=FALSE,per.file=TRUE,
                       normalize.factors=NULL,...){
-  
+
   ## NOTE: median normalizes might normalize too much when a lot of NA
   ##         values are present - mean or colSums better?
-  
-  if (!is.logged(x,"isotopeImpurities.corrected")) 
+
+  if (!is.logged(x,"isotopeImpurities.corrected"))
     warning("Isotope impurity correction has not been logged",
             " - data might be uncorrected. See ?correctIsotopeImpurities.")
 
@@ -586,7 +586,7 @@ normalize <- function(x,f=median,target="intensity",
 
   ##if (is.logged(x,"is.normalized"))
   ##  warning("Normalization is logged already.")
-  
+
   if (!is.null(exclude.protein) & !is.null(use.protein))
     stop("Provide either exclude.protein or use.protein, not both.")
 
@@ -604,27 +604,27 @@ normalize <- function(x,f=median,target="intensity",
     } else {
       if (!all(channels %in% reporterTagNames(x)))
         stop("channels must be reporterTagNames.")
-                                                         
+
       message("normalizing channels ",paste(channels,collapse=", "))
       ri <- reporterIntensities(x)[,channels,drop=FALSE]
     }
   } else {
     ri <- reporterIntensities(x)
   } ## else is.null(channels)
-  
+
   if (!is.null(exclude.protein))
     ri <- ri[!spectrumSel(x,protein=exclude.protein,
                           specificity=if(is.null(peptide.specificity)) c(REPORTERSPECIFIC,GROUPSPECIFIC,UNSPECIFIC) else peptide.specificity),]
-  
-  if (!is.null(use.protein)) 
+
+  if (!is.null(use.protein))
     ri <- ri[spectrumSel(x,protein=use.protein,
                          specificity=if(is.null(peptide.specificity)) REPORTERSPECIFIC else peptide.specificity),,drop=FALSE]
 
-  if (na.rm) 
+  if (na.rm)
     sel.na <- apply(!is.na(ri),1,all)
   else
     sel.na <- rep(TRUE,nrow(ri))
-  
+
   ## TODO: warning when ri is empty
 
   if (per.file && .SPECTRUM.COLS['FILE'] %in% colnames(fData(x))) {
@@ -634,16 +634,16 @@ normalize <- function(x,f=median,target="intensity",
       message("\tnormalizing ",n.file," [",sum(sel)," spectra]")
       ri.sel <- ri[sel,,drop=FALSE]
       normalize.factors <- .get.normalization.factors(ri.sel,f,target,f.doapply,...)
-      reporterIntensities(x)[sel,colnames(ri)] <- 
+      reporterIntensities(x)[sel,colnames(ri)] <-
         reporterIntensities(x)[sel,colnames(ri)]/rep(normalize.factors,each=sum(sel))
       for (i in seq_along(normalize.factors)) {
         x <- do.log(x,paste("normalization.multiplicative.factor file",n.file,"channel",colnames(ri)[i]),
                     round(normalize.factors[i],4))
-      } 
+      }
     }
   } else {
     normalize.factors <- .get.normalization.factors(ri[sel.na,,drop=FALSE],f,target,f.doapply,...)
-    reporterIntensities(x)[,colnames(ri)] <- 
+    reporterIntensities(x)[,colnames(ri)] <-
       reporterIntensities(x)[,colnames(ri)]/
       rep(normalize.factors,each=nrow(reporterIntensities(x)))
     for (i in seq_along(normalize.factors)) {
@@ -655,12 +655,12 @@ normalize <- function(x,f=median,target="intensity",
   ## FIXME: logging a function for f does not work
   ##       x <- do.log(x,"normalization.method",
   ##              sprintf("%s of %s",as.character(substitute(f)),target))
- 
+
   x
 }
 
 .get.normalization.factors <- function(ri,f,target,f.doapply,...) {
-  
+
   if (target=="ratio") {
     rs <- rowSums(ri,na.rm=TRUE)
     if (log)
@@ -672,14 +672,14 @@ normalize <- function(x,f=median,target="intensity",
   } else {
     stop(paste("target",target,"not known"))
   }
-  
+
   if (!f.doapply)
     res <- f(ri,na.rm=TRUE,...)
   else
     res <- apply(ri,2,f,na.rm=TRUE,...)
 
   return(res/max(res,na.rm=T))
- 
+
 }
 
 setGeneric("normalize")
@@ -705,7 +705,7 @@ setMethod("subtractAdditiveNoise",signature(x="IBSpectra"),
                 res
               }
           )
-          
+
         } else {
           ri.sub <- apply(reporterIntensities(x),2,function(x) {
                 q <- quantile(x,probs=prob,na.rm=T)
@@ -726,24 +726,24 @@ setMethod("subtractAdditiveNoise",signature(x="IBSpectra"),
 setMethod("exclude",
     signature(x="IBSpectra",protein="character",peptide="ANY"),
     function(x,protein,peptide=NULL,specificity=c(UNSPECIFIC,GROUPSPECIFIC,REPORTERSPECIFIC)) {
-      
+
       # select peptides for removal
       sel.peptides <- c(peptides(proteinGroup(x),protein=protein,
                                  specificity=specificity),peptide)
-      
+
       # select spectra to keep
       sel.spectra <- !spectrumSel(x,peptide=sel.peptides)
       #sel.spectra <- !spectrumSel(x,protein=proteins.to.exclude,
       #                            specificity=c(REPORTERSPECIFIC,GROUPSPECIFIC,UNSPECIFIC))
-      
+
       # remove spectra from assayData
       for (aden in assayDataElementNames(x)) {
         assayDataElement(x,aden) <- assayDataElement(x,aden)[sel.spectra,]
       }
-      
+
       # remove from featureData
       featureData(x) <- as(fData(x)[sel.spectra,],"AnnotatedDataFrame")
-      
+
       pg.df <- as.data.frame(proteinGroup(x))
       # remove peptides and proteins from proteinGroup
       proteinGroup(x) <- ProteinGroup(pg.df[!pg.df$peptide %in% sel.peptides,] )
@@ -754,7 +754,7 @@ setMethod("exclude",
 
 
 
-subsetIBSpectra <- 
+subsetIBSpectra <-
   function(x, protein=NULL, peptide=NULL, direction="exclude",
            specificity=c(REPORTERSPECIFIC,GROUPSPECIFIC,UNSPECIFIC),...) {
 
@@ -777,7 +777,7 @@ subsetIBSpectra <-
 
   pg.df <- as.data.frame(proteinGroup(x))
   # remove peptides and proteins from proteinGroup
-  proteinGroup(x) <- ProteinGroup(pg.df[pg.df[,"spectrum"] %in% 
+  proteinGroup(x) <- ProteinGroup(pg.df[pg.df[,"spectrum"] %in%
                                         fData(x)[sel.spectra,"spectrum"],] )
 
 
@@ -834,9 +834,8 @@ setMethod("do.log",signature("IBSpectra","character","ANY"),function(x,name,msg)
     }
     tmp.matrix <- matrix(c(format(Sys.time(), "%F %T %Z"),msg),
                          ncol=2,dimnames=list(name))
-                         
+
     message("LOG: ",sprintf("%10s: %s",name,msg))
     x@log <- rbind(x@log,tmp.matrix)
     return(x)
 })
-

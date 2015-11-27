@@ -10,7 +10,7 @@ load.tex.properties <- function(env) {
   needed.objects <- c('ibspectra','noise.model','quant.tbl','ratiodistr')
   if (!all(needed.objects %in% objects(envir=env))) {
     warning("Not all necessary objects present - calling initialize.env")
-    initialize.env(env,env$properties.env) 
+    initialize.env(env,env$properties.env)
   }
   assign("get.property",get.property,envir=env)
 }
@@ -20,7 +20,7 @@ write.tex.commands <- function() {
   cat("\\newcommand{\\analysisname}{",sanitize(get.property('name'),dash=FALSE),"}\n")
   cat("\\newcommand{\\analysisauthor}{",sanitize(get.property('author'),dash=FALSE),"}\n")
 
-  cat("\\newcommand{\\isobarthanks}{\\thanks{This report was 
+  cat("\\newcommand{\\isobarthanks}{\\thanks{This report was
     generated using the \\texttt{isobar} R package version ",
     packageDescription("isobar")$Version,
     " [built using ",packageDescription("isobar")$Built,"]",
@@ -48,26 +48,26 @@ print_longtablehdr <- function(level,is.single.comparision,is.quant.tbl,file="")
   }
 
   if (!is.quant.tbl) {
-    coldef <- coldef.s 
+    coldef <- coldef.s
     ncol.p <- ncol.p -1
   }
 
 
-  mycat <- function(...,append=TRUE,sep="") 
+  mycat <- function(...,append=TRUE,sep="")
     cat(...,file=file,append=append,sep=sep)
 
   mycat("\\begin{longtable}{",coldef,"}\n",
         "  \\# ",paste(" & \\textbf{",level,"}")," & \\rh{group}",
         " & \\rh{peptides}"," & \\rh{spectra}",append=FALSE)
-  
+
   # no ch1/ch2 columns when only one comparision available
-  if (draw.channels) 
+  if (draw.channels)
     mycat("\n  & \\rh{ch1} & \\rh{ch2}")
-  
+
   mycat("\n  & \\rh{quant} & \\textbf{ratio}")
-  if (draw.signcol) 
+  if (draw.signcol)
     mycat(" & ")
-  
+
   mycat("\n  & {\\hfill \\drawaxis{3pt}{south}}",
         "\n\\endhead \n",rep(" &",  ncol.p-1),
        " {\\hfill \\drawaxis{-3pt}{north}}",
@@ -77,7 +77,7 @@ print_longtablehdr <- function(level,is.single.comparision,is.quant.tbl,file="")
 print_longtablehdr_peptide <- function(coldef,draw.channels,ncol.p,draw.signcol) {
   #cat("\n\n\\renewcommand{\\arraystretch}{0.75}\n")
   cat("\\begin{longtable}{",coldef,"}",'\n',sep="")
-  cat("\t \\# ",paste(" & \\textbf{peptide}"))  
+  cat("\t \\# ",paste(" & \\textbf{peptide}"))
   # no ch1/ch2 columns when only one comparision available
   if (draw.channels) {
     cat('\n')
@@ -97,7 +97,7 @@ print_longtablehdr_peptide <- function(coldef,draw.channels,ncol.p,draw.signcol)
 }
 
 
-draw.boxplot <- function(lratio,sd,bnd) { 
+draw.boxplot <- function(lratio,sd,bnd) {
   if (is.na(lratio) || is.na(sd) || !is.finite(lratio) || !is.finite(sd)) {
     return("")
   }
@@ -125,7 +125,7 @@ transform_pepmodif <- function(pep.n.modif) {
 #  if (modif[length(modif)] != "")
 #    stop("modif contains something in the end:",
 #         pep.n.modif[2])
-  
+
   modif <- modif[seq(from=2,to=length(modif))]
   pos <- as.numeric(sapply(modif,function(m) which(modifs[,1] == m)))
 
@@ -153,7 +153,7 @@ modifs <-
 # tex helper functions
 draw.proteingroup.row <- function(name,protein.group,reporter.protein.g,file=file) {
 
-  mycat <- function(...,append=TRUE,sep="") 
+  mycat <- function(...,append=TRUE,sep="")
     cat(...,file=file,append=append,sep=sep)
 
   gmp <- groupMemberPeptides(protein.group,reporter.protein.g,TRUE)
@@ -169,7 +169,7 @@ draw.proteingroup.row <- function(name,protein.group,reporter.protein.g,file=fil
     my.protein.info <- my.protein.info(protein.group,x)
     my.acs <- unique(my.protein.info$accession)
     for (ac.i in seq_along(my.acs)) {
-      if (n.row > 1) mycat(" & ") 
+      if (n.row > 1) mycat(" & ")
       sel <- my.protein.info$accession == my.acs[ac.i]
       var.string <- number.ranges(my.protein.info$splicevariant[sel])
       #cat(protein.i,"&")
@@ -197,10 +197,10 @@ draw.proteingroup.row <- function(name,protein.group,reporter.protein.g,file=fil
         mycat(" & \\\\ \n")
       }
       n.row <- n.row + 1
-          
+
     }
     #human.protein.name <- human.protein.names(my.protein.info)
-  } 
+  }
 }
 
 
@@ -234,10 +234,10 @@ draw.protein.group <- function(protein.group,reporter.protein.g) {
           sanitize(unique(my.protein.info$gene_name[sel])),
           sanitize(unique(my.protein.info$protein_name[sel])),"",
           sep=" & "),"\\\\ \n")
-          
+
     }
     #human.protein.name <- human.protein.names(my.protein.info)
-  } 
+  }
   cat("\\end{tabular}\n")
 
 }
@@ -247,11 +247,11 @@ tikz.proteingroup <- function(protein.group,reporter.protein.g,show.pos,show.hea
 
   gmp <- groupMemberPeptides(protein.group,reporter.protein.g,TRUE)
   reporter.sp.sel <- gmp$peptide.info$specificity == "reporter-specific"
-  quant.sel <- gmp$peptide.info$n.shared.groups == 1 & 
+  quant.sel <- gmp$peptide.info$n.shared.groups == 1 &
                gmp$peptide.info$n.shared.proteins == 2
   group.sp.sel <- gmp$peptide.info$specificity == "group-specific" & !quant.sel
   unspecific.sel <- gmp$peptide.info$specificity == "unspecific"
-  
+
   peptide.styles <- rep("us",nrow(gmp$peptide.info))
   peptide.styles[reporter.sp.sel] <- "rs"
   peptide.styles[group.sp.sel] <- "gs"
@@ -282,7 +282,7 @@ tikz.proteingroup <- function(protein.group,reporter.protein.g,show.pos,show.hea
     tikz.x <- round(tikz.x*max.n.peptides/n.peptides,2)
     tikz.minnodesize <- round(tikz.minnodesize*max.n.peptides/n.peptides,2)
   }
-  
+
   res <- paste(res,sprintf("\\begin{tikzpicture}[x=%scm,y=%scm,every node/.style={minimum size=%scm}]\n",tikz.x,tikz.y,tikz.minnodesize))
   if (show.header)
     res <- paste(res,"  \\node at (1,0)[anchor=west] {peptides};\n")
@@ -299,7 +299,7 @@ tikz.proteingroup <- function(protein.group,reporter.protein.g,show.pos,show.hea
 
     my.protein.info <- my.protein.info(protein.group,x)
     human.protein.name <- human.protein.names(my.protein.info)
-    
+
     name.i <- 1
     table.name.nolink <- human.protein.name$ac_nolink[1]
     nch.tablename <- nchar(table.name.nolink)
@@ -320,11 +320,11 @@ tikz.proteingroup <- function(protein.group,reporter.protein.g,show.pos,show.hea
                 sum(peptide.idx.sel&reporter.sp.sel),
                 sum(peptide.idx.sel&(group.sp.sel|quant.sel)),
                 sum(peptide.idx.sel&unspecific.sel))
-   
+
      res<- paste(res,.print.proteinrow(
         -protein.i,paste(which(peptide.idx.sel),peptide.styles[peptide.idx.sel],sep="/")
      ))
-   
+
      if (n.peptides < 15) {
        res <- paste(res,connect.nodes(-protein.i,which((reporter.sp.sel | group.sp.sel | unspecific.sel | quant.sel)&gmp$group.member.peptides[,protein.i])))
      }
@@ -420,12 +420,12 @@ sanitize <- function(str,dash=TRUE) {
 print_sign_proteins_tbl <- function(file,cmbn,protein.group,quant.tbl,my.protein.infos,bnd) {
 
   is.single.comparision <- ncol(cmbn) ==1
-  mycat <- function(...,append=TRUE,sep="") 
+  mycat <- function(...,append=TRUE,sep="")
     cat(...,file=file,append=append,sep=sep)
 
   print_longtablehdr("protein",is.single.comparision,FALSE,file=file)
   draw.hline <- FALSE
-  
+
   for (cmb_i in seq_len(ncol(cmbn))) {
     sel <- quant.tbl[["r1"]]==cmbn[1,cmb_i] &
            quant.tbl[["r2"]]==cmbn[2,cmb_i] &
@@ -438,7 +438,7 @@ print_sign_proteins_tbl <- function(file,cmbn,protein.group,quant.tbl,my.protein
         draw.hline = TRUE
       }
       prot_i <- 1
-  
+
       proteins <- quant.tbl[sel,"ac"][order(quant.tbl[sel,"lratio"])]
       for (protein in proteins) {
         prot.info <- my.protein.infos[[protein]]
@@ -505,7 +505,7 @@ print_protein_quant_tbl <- function(file="",
   message("Writing protein quantifications table ... ",append.lf=FALSE)
 
   is.single.comparision <- ncol(cmbn) ==1
-  mycat <- function(...,append=TRUE,sep="") 
+  mycat <- function(...,append=TRUE,sep="")
     cat(...,file=file,append=append,sep=sep)
 
   mr <- function(text,...) if (is.single.comparision) { text } else { sprintf("\\mr{%s}",text) }
@@ -515,23 +515,23 @@ print_protein_quant_tbl <- function(file="",
 
   proteins.n.group <- unique(quant.tbl[,c('ac','group')])
   proteins <- proteins.n.group[order(proteins.n.group[["group"]]),"ac"]
-  
+
   for (protein in proteins) {
     protein.rows <- quant.tbl[quant.tbl[["ac"]]==protein,,drop=FALSE]
     protein.rows <- protein.rows[order(protein.rows[["r1"]],protein.rows[["r2"]]),,drop=FALSE]
     protein.groupnumber <- protein.rows[1,"group"]
     prot.info <- my.protein.infos[[protein]]
-  
+
     reporter.peptides <- peptides(protein.group,protein=protein)
     spectra <- names(spectrumToPeptide(protein.group))[spectrumToPeptide(protein.group)%in%reporter.peptides]
-  
+
     if (all(is.na(protein.rows[,'lratio']))) {
       next
     }
-  
+
     protein.names <- prot.info[["collapsed.gene_name"]][["protein_name"]]
     gene.names <- .tex.combinenames(protein.names,is.single.comparision,cmbn)
-  
+
     mycat(mr(sprintf(" \\hyperref[protein.%s]{\\textbf{%s}}",
                    protein.groupnumber,protein.groupnumber)),
         " & ",mrp(paste0(prot.info[["table.name"]],ifelse(length(gene.names)>0,": ",""),
@@ -540,14 +540,14 @@ print_protein_quant_tbl <- function(file="",
         " & ",mr(print_groupsize(prot.info[["n.reporter"]],prot.info[["n.groupmember"]])),
         " & ",mr(length(reporter.peptides)),
         " & ",mr(length(spectra)),sep=" ")
-  
+
     for (i in seq_len(ncol(cmbn))) {
       if (i > 1) { mycat(paste(rep("&",4),collapse=" ")) }
       if (!is.single.comparision) {
           mycat(" & ",protein.rows[i,'r1'])
           mycat(" & ",protein.rows[i,'r2'])
       }
-      mycat(" & ",ifelse(is.na(protein.rows[i,'n.spectra']) | 
+      mycat(" & ",ifelse(is.na(protein.rows[i,'n.spectra']) |
                     protein.rows[i,'n.spectra']==0,"",protein.rows[i,'n.spectra']))
       if (is.na(protein.rows[i,"lratio"])) {
         mycat (" & & & ")
@@ -590,7 +590,7 @@ print_classlabels_tbl <- function(cl,reporterTagNames) {
       cat("\\end{tabular}\n")
     }
   }
-  
+
 }
 
 print_protein_notquant_tbl <- function(file="",
@@ -599,7 +599,7 @@ print_protein_notquant_tbl <- function(file="",
                                     my.protein.infos) {
 
   is.single.comparision <- ncol(cmbn) ==1
-  mycat <- function(...,append=TRUE,sep="") 
+  mycat <- function(...,append=TRUE,sep="")
     cat(...,file=file,append=append,sep=sep)
 
 
@@ -612,19 +612,19 @@ print_protein_notquant_tbl <- function(file="",
   "  & \\rh{peptides}",
   "  & \\rh{spectra}",
   "\\endhead",sep="\n",append=FALSE)
-  
+
   for (protein in proteins.notquantified) {
     protein.rows <- quant.tbl[quant.tbl[["ac"]]==protein,,drop=FALSE]
     protein.rows <- protein.rows[order(protein.rows[["r1"]],protein.rows[["r2"]]),,drop=FALSE]
     protein.groupnumber <- protein.rows[1,"group"]
     prot.info <- my.protein.infos[[protein]]
-  
+
     reporter.peptides <- peptides(protein.group,protein=protein)
     spectra <- names(spectrumToPeptide(protein.group))[spectrumToPeptide(protein.group)%in%reporter.peptides]
-  
+
     protein.names <- prot.info[["collapsed.gene_name"]][["protein_name"]]
     gene.names <- .tex.combinenames(protein.names,is.single.comparision,cmbn)
-  
+
     mycat(sprintf(" \\hyperref[protein.%s]{%s}",
                    protein.groupnumber,protein.groupnumber),
         " & ",paste0(prot.info[["table.name"]],": ",
@@ -637,7 +637,7 @@ print_protein_notquant_tbl <- function(file="",
 }
 
 print_protein_grp_tbl <- function(file="",proteins, protein.group) {
-  mycat <- function(...,append=TRUE,sep="") 
+  mycat <- function(...,append=TRUE,sep="")
     cat(...,file=file,append=append,sep=sep)
 
   mycat("\\begin{longtable}{rcXp{6cm}}\n",append=FALSE)
@@ -649,7 +649,7 @@ print_protein_grp_tbl <- function(file="",proteins, protein.group) {
     prot_i <- prot_i + 1
   }
   mycat("\\end{longtable}\n")
-  
+
 }
 
 print_protein_grp_info <- function() {
@@ -659,9 +659,9 @@ cat("
 Protein groups are created by grouping according to mass spectrometry evidence:
 
 \\begin{tabularx}{\\textwidth}{rX}
-1. & Proteins which are detected with the exact same set of peptides are clustered - they are indistinguishable based on available MS data. Very often these are splice variants. In the following text, proteins are clustered proteins (cluster size one if they have specific peptides).  \\\\ 
-2. & Proteins, which have unique peptides (\\emph{i.\\,e.}~peptides not present in other detected proteins) are promoted to \\emph{reporters}. \\\\ 
-3. & Remaining proteins are grouped to those reporters which have a superset of the peptides they have. These proteins are termed \\emph{group members} \\\\ 
+1. & Proteins which are detected with the exact same set of peptides are clustered - they are indistinguishable based on available MS data. Very often these are splice variants. In the following text, proteins are clustered proteins (cluster size one if they have specific peptides).  \\\\
+2. & Proteins, which have unique peptides (\\emph{i.\\,e.}~peptides not present in other detected proteins) are promoted to \\emph{reporters}. \\\\
+3. & Remaining proteins are grouped to those reporters which have a superset of the peptides they have. These proteins are termed \\emph{group members} \\\\
 \\end{tabularx}
 
 Peptides are characterized based on their specificity to one or more proteins, and one or more protein groups:

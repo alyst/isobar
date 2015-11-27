@@ -13,9 +13,9 @@ calcProbXDiffNormals <- function(X,mu_Y,sd_Y,...,alternative=c("greater","less",
   require(distr)
   if (!is(X,"Distribution")) stop("X has to be of class Distribution (is ",class(X),")")
 
-  if (length(mu_Y) != length(sd_Y)) 
+  if (length(mu_Y) != length(sd_Y))
     stop("mu_Y and sd_Y should have equal length")
- 
+
   if (isTRUE(progress))
     pb <- txtProgressBar(min=1,max=length(mu_Y))
 
@@ -67,7 +67,7 @@ calcProbXGreaterThanY <- function(X, Y, rel.tol=.Machine$double.eps^0.25, subdiv
   steps.seq <- seq(from=min.q,to=1-min.q,length.out=subdivisions)
   steps <- sort(unique(c(q(X)(steps.seq),q(Y)(steps.seq))))
   nsubdivisions <- length(steps)
-           
+
   dens.X <- d(X)(steps)
   dens.Y <- d(Y)(steps)
 
@@ -95,7 +95,7 @@ calcCumulativeProbXGreaterThanY <- function(Xs, mu_Ys, sd_Ys,
 
   alternative <- match.arg(alternative)
 
-  # cumulative Y distribution is Gaussian with explicitly calculated parameters 
+  # cumulative Y distribution is Gaussian with explicitly calculated parameters
   require(distr)
   inv_vars <- sd_Ys^(-2)
   var_Cum <- 1 / sum( inv_vars )
@@ -115,7 +115,7 @@ calcCumulativeProbXGreaterThanY <- function(Xs, mu_Ys, sd_Ys,
     pdf_Xs <- lapply( d_Xs, function(d_X) d_X(t) )
     # multiply all PDFs for each element in t
     sapply( seq_along(t), function(ix) prod(sapply(pdf_Xs, function(pdf_X) pdf_X[[ix]])) )
-  } 
+  }
 
   pdf_cum_XmY <- function( t ) pdf_cum_X(t) * distr::p( cum_Y )(t)
 
@@ -143,10 +143,8 @@ twodistr.plot <- function(X,Y,n.steps=1000,min.q=10^-3) {
   steps.seq <- seq(from=0,to=1,length.out=n.steps)
   steps <- sort(unique(c(q(X)(steps.seq),q(Y)(steps.seq))))
   ggplot(rbind(data.frame(x=steps,Distribution=paste0("X ~ ",distrprint(X)),density=d(X)(steps)),
-               data.frame(x=steps,Distribution=paste0("Y ~ ",distrprint(Y)),density=d(Y)(steps)))) + 
+               data.frame(x=steps,Distribution=paste0("Y ~ ",distrprint(Y)),density=d(Y)(steps)))) +
     geom_line(aes_string(x="x",y="density",color="Distribution")) +
     ggtitle(paste0("P(X>=Y) = ",round(calcProbXGreaterThanY(X,Y),7)))
- 
+
 }
-
-

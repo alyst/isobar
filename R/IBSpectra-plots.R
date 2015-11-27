@@ -18,7 +18,7 @@ setMethod("reporterMassPrecision",
 
 setGeneric("reporterIntensityPlot",function(x) standardGeneric("reporterIntensityPlot"))
 
-# Calculates and displays the deviation from the 'true' tag mass 
+# Calculates and displays the deviation from the 'true' tag mass
 # - as specified in the IBSpectra object - of each channel.
 setMethod("reporterMassPrecision", signature=c(x="IBSpectra",plot="logical"),
     function(x,plot=TRUE,nrow=NULL) {
@@ -35,14 +35,14 @@ setMethod("reporterMassPrecision", signature=c(x="IBSpectra",plot="logical"),
                  levels=reporterTagNames(x),
                  labels=sprintf("%s: m/z %.2f",
                    reporterTagNames(x),reporterTagMasses(x)))
-       
+
        if (is.null(nrow))
          nrow <- ceiling(ncol(masses)/5)
 
        ggplot(melt.masses,aes_string(x="mass.difference")) + geom_vline(xintercept=0,alpha=0.8) +
           geom_histogram(fill="white",aes_string(colour="reporter"),alpha=0.8,
-                         binwidth=1/20*(max(melt.masses$mass.difference,na.rm=TRUE)-min(melt.masses$mass.difference,na.rm=TRUE))) + 
-            facet_wrap(~reporter,scales="fixed",nrow=nrow) + 
+                         binwidth=1/20*(max(melt.masses$mass.difference,na.rm=TRUE)-min(melt.masses$mass.difference,na.rm=TRUE))) +
+            facet_wrap(~reporter,scales="fixed",nrow=nrow) +
             theme_bw(base_size=10) + xlab("mass difference theoretical vs observed reporter tag mass") +
               .gg_theme(legend.position="none",
                    axis.text.x = .gg_element_text(angle=330,hjust=0,vjust=1,colour="grey50",size=7))
@@ -75,7 +75,7 @@ setMethod("reporterIntensityPlot",
             require(ggplot2)
             intensities <- reporterIntensities(x)
             intensities.nn <- reporterData(x,element="ions_not_normalized") # null if not normalized
-            
+
             melt.intensities <- data.frame(tag=rep(colnames(intensities),each=nrow(intensities)),
                        normalized=factor(ifelse(is.null(intensities.nn),"","2. after normalization")),
                        intensity=as.numeric(intensities),
@@ -88,10 +88,10 @@ setMethod("reporterIntensityPlot",
                              intensity=as.numeric(intensities.nn),
                              stringsAsFactors=FALSE))
             }
-            
+
             ggplot(melt.intensities,aes_string(x="tag",y="intensity")) +
               geom_boxplot(aes_string(color="normalized"),size=0.5,alpha=0.6,
-                           outlier.size=0.5,position=position_dodge(width=0.25)) + 
+                           outlier.size=0.5,position=position_dodge(width=0.25)) +
               xlab("isobaric reporter tag") +
               scale_y_log10() + theme_bw(base_size=10) + scale_color_hue("") +
               .gg_theme(axis.text.x=.gg_element_text(angle=90, hjust=1))
@@ -119,7 +119,7 @@ setMethod("plotRatio",
       G=log10(ions[,channel2])
       M <- R - G
       A <- 0.5*(R + G)
-      
+
       M <- M[order(A)]
       A <- sort(A)
       plot(A,M,pch=pch,...)
@@ -127,20 +127,20 @@ setMethod("plotRatio",
       if (!missing(noise.model) & !is.null(noise.model)) {
         if (is(noise.model,"NoiseModel"))
           noise.model <- c(noise.model)
-        for (i in seq_along(noise.model)) {          
+        for (i in seq_along(noise.model)) {
           lines(A,1.96*sqrt(variance(noise.model[[i]],A)),col=noise.model.col[i])
           lines(A,-1.96*sqrt(variance(noise.model[[i]],A)),col=noise.model.col[i])
         }
       }
-      
+
       unspecific.spectra.sel    <- names(A) %in% spectrumSel(x,protein=protein,specificity=UNSPECIFIC)
       groupspecific.spectra.sel <- names(A) %in% spectrumSel(x,protein=protein,specificity=GROUPSPECIFIC)
       specific.spectra.sel      <- names(A) %in% spectrumSel(x,protein=protein,specificity=REPORTERSPECIFIC)
-        
+
       points(A[unspecific.spectra.sel],M[unspecific.spectra.sel],pch=pch.p,col="yellow",...)
       points(A[groupspecific.spectra.sel],M[groupspecific.spectra.sel],pch=pch.p,col="orange",...)
       points(A[specific.spectra.sel],M[specific.spectra.sel],pch=pch.p,col="red",...)
-        
+
     }
 )
 
@@ -150,7 +150,7 @@ maplot.protein <- function(x,relative.to,protein,noise.model=NULL,
         main=protein,xlab=NULL,ylab=NULL,type="ma",show.lm=FALSE,...) {
  	  if (is(x,"IBSpectra"))
       x <- c(x)
-   
+
     if (!relative.to %in% reporterTagNames(x[[1]]))
       stop("relative.to must be one of the reporter tag names (",paste(reporterTagNames(x[[1]]),collapse=","),")")
 
@@ -165,7 +165,7 @@ maplot.protein <- function(x,relative.to,protein,noise.model=NULL,
 
     if (is.null(xlab) && type!="ma") xlab <- paste("intensity",relative.to)
     if (is.null(ylab) && type!="ma") ylab <- paste("intensity",paste(channels,collapse=", "))
-    
+
 
     for (ib in x) {
       ions <- reporterIntensities(ib,na.rm=FALSE,protein=protein)
@@ -205,7 +205,7 @@ maplot.protein <- function(x,relative.to,protein,noise.model=NULL,
           y <- ions[,channel]
         }
 
-        if (channel_i == 1 && add == FALSE) 
+        if (channel_i == 1 && add == FALSE)
           plot(x,y,xlim=xlim,ylim=ylim,pch=pchs[i],log=log,main=main,col=cols[i],
                xlab=xlab,ylab=ylab,...)
         else
@@ -233,7 +233,7 @@ maplot.protein <- function(x,relative.to,protein,noise.model=NULL,
           }
 
           if (!is.na(ratio[1]))
-            legend$text[length(legend$text)] <- 
+            legend$text[length(legend$text)] <-
               sprintf("%s = %.2f +/- %.2f",legend$text[length(legend$text)],10^ratio[1],10^sqrt(ratio[2]))
           #abline(h=10^(ratio[1]+1.96*sqrt(ratio[2])),lty=channel_i,lwd=0.5)
           #abline(h=10^(ratio[1]-1.96*sqrt(ratio[2])),lty=channel_i,lwd=0.5)
@@ -269,32 +269,32 @@ setMethod("maplot",
               identify=FALSE,identify.column="spectrum",
               x.axis.labels=TRUE,y.axis.labels=TRUE,
               col="black",...) {
-            if (is.null(protein)) 
+            if (is.null(protein))
               ions <- reporterIntensities(x,na.rm=FALSE)
             else
               ions <- reporterIntensities(x,na.rm=FALSE,protein=protein)
 
             fd <- fData(x)
-            
+
             # remove points which are NA in both channels
             if (channel2=="ALL" | channel1=="ALL")
               sel <- apply(is.na(ions),1,all)
-            else 
+            else
               sel <- is.na(ions[,channel1]) & is.na(ions[,channel2])
             ions <- ions[!sel,,drop=FALSE]
             fd <- fd[!sel,,drop=FALSE]
-            
+
             if (na.rm) {
               if (channel2=="ALL" | channel1=="ALL")
                 sel <- apply(is.na(ions),1,any)
-              else 
+              else
                 sel <- is.na(ions[,channel1])| is.na(ions[,channel2])
               if (any(sel))
                 warning(sprintf("removing %s NA points",sum(sel)))
               ions <- ions[!sel,,drop=FALSE]
               fd <- fd[!sel,,drop=FALSE]
             }
-            
+
             if (channel1=="ALL" && channel2=="ALL")
               stop("Cannot set both channels to ALL")
 
@@ -308,10 +308,10 @@ setMethod("maplot",
               R=ions[,channel1]
               G=ions[,channel2]
             }
-            
+
             M <- R/G
             A <- log10(sqrt(R*G))
-            
+
 
             if (isTRUE(set.na.to)) {
               set.na.to <- ceiling(10^(max(abs(log10(M)), na.rm = TRUE)+0.2))
@@ -321,7 +321,7 @@ setMethod("maplot",
               sel <- is.na(R);
               M[sel] <- set.na.to + 1;
               A[sel] <- log10(G[sel])
-              sel <- is.na(G); 
+              sel <- is.na(G);
               M[sel] <- 1/set.na.to
               A[sel] <- log10(R[sel])
             }
@@ -331,7 +331,7 @@ setMethod("maplot",
               text(1,1,"no datapoints")
               return()
             }
-            
+
             if (smooth) {
 #              smoothScatter(A,M,log="y",...)
               stop("option smooth deprecated!")
@@ -364,19 +364,19 @@ setMethod("maplot",
               sel <- A < v
               points(A[sel],M[sel],col=col.v,pch=pch,...)
             }
-            
+
             #abline(h=0,col="red")
             if (!missing(noise.model) & !is.null(noise.model)) {
               if (is(noise.model,"NoiseModel"))
                 noise.model <- c(noise.model)
 
               ss <- seq(min(A,na.rm=TRUE),max(A,na.rm=TRUE),length.out=100)
-              for (i in seq_along(noise.model)) {          
+              for (i in seq_along(noise.model)) {
                 lines(ss,10^(1.96*sqrt(variance(noise.model[[i]],ss))),col=noise.model.col[i],lwd=2)
                 lines(ss,10^(-1.96*sqrt(variance(noise.model[[i]],ss))),col=noise.model.col[i],lwd=2)
               }
             }
-            
+
             if (!is.null(colorize.protein)) {
               if (is.list(colorize.protein)) {
                 cp.legend <- c()
@@ -406,13 +406,13 @@ setMethod("maplot",
                 groupspecific.spectra.sel <- names(A) %in% spectrumSel(x,protein=colorize.protein,specificity=GROUPSPECIFIC,spectrum.titles=T)
                 specific.spectra.sel      <- names(A) %in% spectrumSel(x,protein=colorize.protein,specificity=REPORTERSPECIFIC,spectrum.titles=T)
                 other.sel <- !unspecific.spectra.sel & !groupspecific.spectra.sel & !specific.spectra.sel
-              
+
                 points(A[unspecific.spectra.sel],M[unspecific.spectra.sel],pch=pch.p,col="yellow",...)
                 points(A[groupspecific.spectra.sel],M[groupspecific.spectra.sel],pch=pch.p,col="orange",...)
                 points(A[specific.spectra.sel],M[specific.spectra.sel],pch=pch.p,col="green",...)
   #points(A[other.sel],M[other.sel],pch=".",col="blue",...)
               }
-              
+
             }
             if (identify)
               identify(x=A,y=M,labels=fd[,identify.column])
@@ -436,7 +436,7 @@ setMethod("maplot",
         text(1,1,"no datapoints")
         return()
       }
-      
+
       M <- log10(channel1) - log10(channel2)
       A <- 0.5*(log10(channel1) + log10(channel2))
       M <- M[order(A)]
@@ -450,7 +450,7 @@ setMethod("maplot",
         if (is(noise.model,"NoiseModel"))
           noise.model <- c(noise.model)
         ss <- seq(min(A),max(A),by=0.05)
-        for (i in seq_along(noise.model)) {          
+        for (i in seq_along(noise.model)) {
           lines(ss,1.96*sqrt(variance(noise.model[[i]],ss)),col=noise.model.col[i],lwd=1.5)
           lines(ss,-1.96*sqrt(variance(noise.model[[i]],ss)),col=noise.model.col[i],lwd=1.5)
           #lines(A,1.96*sqrt(variance(noise.model[[i]],channel1,channel2)),col=noise.model.col[i])
@@ -466,8 +466,8 @@ setMethod("maplot",
             ions <- reporterIntensities(x)
               set.na.to <- NULL
               set.na.to.lim <- NULL
-              if (identical(xlim,"fixed")) 
-                xlim <- log10(range(ions,na.rm=T)) 
+              if (identical(xlim,"fixed"))
+                xlim <- log10(range(ions,na.rm=T))
               if (identical(ylim,"fixed")) {
                 y.max <- max(apply(ions,1,function(x) {
                                    y <- x[!is.na(x)]
@@ -487,15 +487,15 @@ setMethod("maplot",
                   bty="n",fg="darkgray")
               for (i in colnames(ions)) {
                 for (j in colnames(ions)) {
-                  if (i == j) { 
+                  if (i == j) {
                     if (all(is.na(ions[,i])))
                       plot(histlimits,c(1,1),type="n",bty="n", xaxt="n", yaxt="n", main="",ylim=c(0,1))
                     else
-                      hist(log10(ions[,i]), col="#EEEEEE", freq=FALSE, 
+                      hist(log10(ions[,i]), col="#EEEEEE", freq=FALSE,
                            xlim=histlimits,cex=0.5,breaks=20,
                            bty="n", xaxt="n", yaxt="n", main="",ylim=c(0,1))
-                    text(sum(histlimits)/2,0.5,i,col="black",cex=1.2,font=2); 
-                    #text(sum(histlimits)/2,0.4,sprintf("n = %s",sum(!is.na(ions[,i]))),col="black",cex=1,font=2); 
+                    text(sum(histlimits)/2,0.5,i,col="black",cex=1.2,font=2);
+                    #text(sum(histlimits)/2,0.4,sprintf("n = %s",sum(!is.na(ions[,i]))),col="black",cex=1,font=2);
                     #legend("center",
                     #       legend=c(sprintf("%3s",i),
                     #                sprintf("n = %s",sum(!is.na(ions[,i])))),
@@ -511,12 +511,12 @@ setMethod("maplot",
                            x.axis.labels = plot.labels.x,
                            y.axis.labels = plot.labels.y,
                            ...)
-                    
+
                   }
                   else if (i < j) {
                     plot(c(0,1),c(0,1),type="n",ylab="",xlab="",xaxt="n",yaxt="n",bty="n")
                   }
-                        
+
                 }
               }
             } else {
@@ -545,25 +545,25 @@ setMethod("protGgdata",
     function(x,relative.to,protein,noise.model=NULL,
         channels=setdiff(reporterTagNames(x),relative.to),
         names=NULL,legend.cex=0.8,...) {
-      
+
       dfs <- data.frame()
       i <- 1
       for (ib in x) {
             ions <- reporterIntensities(ib,na.rm=FALSE,protein=protein)
             ions[which(is.na(ions))] <- 0
-            
+
             for (channel_i in seq_along(channels)) {
               channel <- channels[channel_i]
               channel.rt <- ifelse(length(relative.to) == 1,
                                    relative.to,relative.to[channel_i])
-              
+
               div <- ions[,channel]/ions[,channel.rt]
               avg <- (ions[,channel]+ions[,channel.rt])/2
-              
+
               if (length(div)>0 & sum(avg,na.rm=T) > 0) {
                 if (!is.null(noise.model)) {
                   ratio <- estimateRatio(ib,noise.model,channel.rt,channel,protein=protein)
-                  
+
                   dfs <-
                     rbind(dfs,data.frame(channel=channel,channel.rt=channel.rt,
                                          average=avg,difference=div,ratio=10^ratio[1],
@@ -571,15 +571,13 @@ setMethod("protGgdata",
                                           sprintf("%s/%s",channel,channel.rt),names[i]),
                                          lower=10^(ratio[1]-sqrt(ratio[2])),
                                          upper=10^(ratio[1]+sqrt(ratio[2]))))
-                  
+
                 }
               }
               i <- i + 1
             }
           }
           return(dfs)
-          
+
     }
 )
-
-

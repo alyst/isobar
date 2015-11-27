@@ -85,7 +85,7 @@ if(!isGeneric("as.data.frame")) setGeneric("as.data.frame", useAsDefault=as.data
 .names.as.vector <- function(x) {
   if (!is.null(names(x)))
     vec <- names(x)
-  else 
+  else
     vec <- x
   setNames(vec,x)
 }
@@ -219,21 +219,21 @@ number.ranges <- function(numbers) {
   res
 }
 
-.sum.bool.na  <- function(x) 
+.sum.bool.na  <- function(x)
   c('TRUE'=sum(x,na.rm=TRUE),'FALSE'=sum(!x,na.rm=TRUE),'TRUE %'=round(sum(x,na.rm=TRUE)/length(x)*100,1),length=length(x),n.na=sum(is.na(x)))
 
 # provide summary of boolean vector values
-.sum.bool  <- function(x) 
+.sum.bool  <- function(x)
   c('TRUE'=sum(x),'FALSE'=sum(!x),'TRUE %'=round(sum(x)/length(x)*100,1),length=length(x))
 
 # provide character summary of boolean vectors
-.sum.bool.c  <- function(x) 
+.sum.bool.c  <- function(x)
   paste('TRUE: ',sum(x),'; FALSE: ',sum(!x),'; TRUE %: ',round(sum(x)/length(x)*100,1),"; length: ",length(x),sep="")
 
 .combine.fisher <- function(p.values,signs) {
   if (length(signs) != length(p.values))
     stop("lratios and pvalues must have equal length!")
-  
+
   sel.notna <- !is.na(p.values)
   p.values <- p.values[sel.notna]
   signs <- signs[sel.notna]
@@ -277,7 +277,7 @@ number.ranges <- function(numbers) {
       message(" finished.")
     } else {
       message("  calling system command [",cmd," > ",stdout.to,"]",appendLF=FALSE)
-      if (system(paste(cmd,">",stdout.to)) != 0) 
+      if (system(paste(cmd,">",stdout.to)) != 0)
         stop("\nError executing [",cmd,"]: \n\n ...\n",
              paste(tail(readLines(stdout.to),n=10),collapse="\n"))
       message(" finished.")
@@ -291,7 +291,7 @@ number.ranges <- function(numbers) {
 
   res <- c()
   for (cc in combn)
-    for (tag1 in tags[cl==cc[1]&!is.na(cl)]) 
+    for (tag1 in tags[cl==cc[1]&!is.na(cl)])
       for (tag2 in tags[cl==cc[2]&!is.na(cl)])
         res <- cbind(res,c(r1=tag1,r2=tag2,
                      class1=cc[1],
@@ -328,7 +328,7 @@ number.ranges <- function(numbers) {
 }
 
 
-.concensus.il.peptide <- function(peptide) { 
+.concensus.il.peptide <- function(peptide) {
     pep <- do.call(rbind,strsplit(peptide,""))
     paste0(apply(pep,2,function(x) {
       xu <- unique(x)
@@ -348,11 +348,9 @@ number.ranges <- function(numbers) {
    } else {
      from$peptide <- as.vector( tapply(from[,.SPECTRUM.COLS['PEPTIDE']],l.peptide,function(x) {
            if (all(x == x[1])) x[1]
-           else 
+           else
               .concensus.il.peptide(unique(x))
      }))[l.peptide]
    }
    return(from)
 }
-
-

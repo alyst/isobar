@@ -24,7 +24,7 @@ args <- commandArgs(TRUE)
 
 if ("--help" %in% args || "-h" %in% args) {
   print_help_and_exit();
-} 
+}
 
 get.arg <- function(name) {
   if (name %in% args) {
@@ -37,9 +37,9 @@ get.arg <- function(name) {
 
 meta.report <- get.arg("--meta")
 
-if (meta.report) 
+if (meta.report)
   properties.file <- "meta-properties.R"
-else 
+else
   properties.file <- "properties.R"
 
 if (length(args) > 0 && file.exists(args[length(args)])) {

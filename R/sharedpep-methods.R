@@ -2,15 +2,15 @@
 # returns a list of all combinations of a group reporter and a group member
 # where there are peptides which are only shared between reporter and member
 .proteins.w.shared.peptides <- function(protein.group) {
-  proteins.w.shared.pep = lapply(reporterProteins(protein.group), function(reporter.protein.g) {    
-    gmp <- groupMemberPeptides(protein.group,reporter.protein.g,TRUE)           
-    reporter.sp.sel <- gmp$peptide.info$specificity == REPORTERSPECIFIC      
-    quant.sel <- gmp$peptide.info$n.shared.groups == 1 &                        
-                 gmp$peptide.info$n.shared.proteins == 2                        
-    gd.proteins <- apply(gmp$group.member.peptides[quant.sel,,drop=FALSE],2,any)         
-                                                                                
-    return(gd.proteins)                                                         
-                                                                                
+  proteins.w.shared.pep = lapply(reporterProteins(protein.group), function(reporter.protein.g) {
+    gmp <- groupMemberPeptides(protein.group,reporter.protein.g,TRUE)
+    reporter.sp.sel <- gmp$peptide.info$specificity == REPORTERSPECIFIC
+    quant.sel <- gmp$peptide.info$n.shared.groups == 1 &
+                 gmp$peptide.info$n.shared.proteins == 2
+    gd.proteins <- apply(gmp$group.member.peptides[quant.sel,,drop=FALSE],2,any)
+
+    return(gd.proteins)
+
   })
   names(proteins.w.shared.pep) <- reporterProteins(protein.group)
   do.call(sum,proteins.w.shared.pep)
@@ -34,27 +34,27 @@
 
 shared.ratios <- function(ibspectra,noise.model,channel1=NULL,channel2=NULL,protein=reporterProteins(proteinGroup(ibspectra)),...) {
   protein.group <- proteinGroup(ibspectra)
-  l <- lapply(protein, function(reporter.protein.g) {    
-    gmp <- groupMemberPeptides(protein.group,reporter.protein.g,TRUE)           
-    reporter.sp.sel <- gmp$peptide.info$specificity == REPORTERSPECIFIC      
-    quant.sel <- gmp$peptide.info$n.shared.groups == 1 &                        
-                 gmp$peptide.info$n.shared.proteins == 2                        
+  l <- lapply(protein, function(reporter.protein.g) {
+    gmp <- groupMemberPeptides(protein.group,reporter.protein.g,TRUE)
+    reporter.sp.sel <- gmp$peptide.info$specificity == REPORTERSPECIFIC
+    quant.sel <- gmp$peptide.info$n.shared.groups == 1 &
+                 gmp$peptide.info$n.shared.proteins == 2
     gd.proteins <- apply(gmp$group.member.peptides[quant.sel,,drop=FALSE],2,any)
     gd.proteins <- names(gd.proteins)[gd.proteins]
     gd.proteins <- gd.proteins[gd.proteins != reporter.protein.g]
 
     if (length(gd.proteins) > 0) {
-      ratio.1 <- estimateRatio(ibspectra,noise.model=noise.model,               
-                               protein=reporter.protein.g,channel1=channel1,      
+      ratio.1 <- estimateRatio(ibspectra,noise.model=noise.model,
+                               protein=reporter.protein.g,channel1=channel1,
                                channel2=channel2,...)
       if (is.na(ratio.1['lratio']))
         return(NULL)
-      
+
       quant.df <- data.frame(reporter.protein=reporter.protein.g,
                              protein2=gd.proteins,
                              ratio1=ratio.1['lratio'],ratio1.var=ratio.1['variance'],
                              n.spectra.1=ratio.1['n.spectra'],
-                             ratio2=NA,ratio2.var=NA,n.spectra.2=NA,                             
+                             ratio2=NA,ratio2.var=NA,n.spectra.2=NA,
                              stringsAsFactors=FALSE)
       reporter.pep <- gmp$peptide.info$peptide[reporter.sp.sel]
 
@@ -73,24 +73,24 @@ shared.ratios <- function(ibspectra,noise.model,channel1=NULL,channel2=NULL,prot
       return(quant.df)
     } else {
       return(NULL)
-    }                                                                                
+    }
   })
   l <- l[!sapply(l,is.null)]
   do.call(rbind,l)
 }
 
 shared.ratios.sign <- function(ress,z.shared,min.spectra=1,plot=TRUE) {
-    ratio1.issmaller <- ress$ratio1+z.shared*sqrt(ress$ratio1.var) < ress$ratio2 - z.shared*(sqrt(ress$ratio2.var)) 
+    ratio1.issmaller <- ress$ratio1+z.shared*sqrt(ress$ratio1.var) < ress$ratio2 - z.shared*(sqrt(ress$ratio2.var))
     ratio1.isbigger  <- ress$ratio1-z.shared*sqrt(ress$ratio1.var) > ress$ratio2 + z.shared*(sqrt(ress$ratio2.var))
- 
+
     rr <- ress[(ratio1.issmaller | ratio1.isbigger) &
-               !is.na(ratio1.issmaller) & !is.na(ratio1.isbigger) & 
+               !is.na(ratio1.issmaller) & !is.na(ratio1.isbigger) &
                ress$n.spectra.1 >= min.spectra & ress$n.spectra.2 >= min.spectra,]
 
     rr<-rr[order(rr$ratio1,decreasing=T),]
-    
+
     rr$proteins <- as.character(paste(rr$reporter.protein,"\nvs",rr$protein2))
-    
+
     rr$n.spectra.txt <-"> 10"
     rr$n.spectra.txt[rr$n.spectra<=10]<-"6 - 10"
     rr$n.spectra.txt[rr$n.spectra<=5]<-"2 - 5"
@@ -119,14 +119,13 @@ shared.ratios.sign <- function(ress,z.shared,min.spectra=1,plot=TRUE) {
     breaks <- breaks[log10(breaks) %inrange% range(xx$ratio)]
 
     print(ggplot(xx,aes_string(x="ratio",y="proteins")) +
-          geom_vline(xintercept=0,alpha=0.5) + 
-          geom_point(aes_string(colour="g",shape="g"),size=4) + 
-          geom_errorbarh(aes(xmax=ratio+sqrt(var),xmin=ratio-sqrt(var),colour=factor(g),height=0.2)) + 
+          geom_vline(xintercept=0,alpha=0.5) +
+          geom_point(aes_string(colour="g",shape="g"),size=4) +
+          geom_errorbarh(aes(xmax=ratio+sqrt(var),xmin=ratio-sqrt(var),colour=factor(g),height=0.2)) +
           scale_x_continuous("Ratio",breaks=log10(breaks),labels=breaks) +
-          scale_colour_manual("group",values = c("blue","darkgreen")) + 
-          scale_shape("group") + 
+          scale_colour_manual("group",values = c("blue","darkgreen")) +
+          scale_shape("group") +
           scale_size(guide="none"))
   }
   xx
 }
-

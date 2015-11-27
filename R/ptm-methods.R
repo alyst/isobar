@@ -11,7 +11,7 @@ getPhosphoRSProbabilities <- function(
   writePhosphoRSInput(infile,
                       id.file,mgf.file,massTolerance,activationType,
                       mapping.file,mapping,pepmodif.sep)
-  
+
   system(paste(phosphors.cmd,shQuote(infile),shQuote(outfile)))
   readPhosphoRSOutput(outfile,simplify=simplify,pepmodif.sep=pepmodif.sep,besthit.only=besthit.only)
 }
@@ -21,8 +21,8 @@ getPhosphoRSProbabilities <- function(
 .CysCAM.mass = c(monoisotopic = 57.021464, average =  57.0513)
 .OxidationM.mass = c(monoisotopic = 15.994915, average =  15.9994)
 .TMT6.mass = c(monoisotopic = 229.162932, average = 229.2634)
-  
-writePhosphoRSInput <- 
+
+writePhosphoRSInput <-
   function(phosphoRS.infile,id.file,mgf.file,massTolerance,activationType,
            mapping.file=NULL,mapping=c(peaklist="even",id="odd"),pepmodif.sep="##.##",
            modif.masses=
@@ -34,7 +34,7 @@ writePhosphoRSInput <-
                  c("TMT6plex",   "7","7:TMT6:TMT6:229.162932:null:0:KX"),
                  c("TMTsixplex",   "6","6:TMT6:TMT6:229.162932:null:0:KX"))) {
 
-  if (is.data.frame(id.file)) 
+  if (is.data.frame(id.file))
     ids <- id.file
   else
     ids <- isobar:::.read.idfile(id.file,id.format="ibspectra.csv",log=NULL)
@@ -42,7 +42,7 @@ writePhosphoRSInput <-
   ids <- unique(ids[,c("peptide","modif","spectrum")])
   # data[,SC['PEPTIDE']] <- gsub("I","L",data[,SC['PEPTIDE']])
 
-  
+
   if (!is.null(mapping.file)) {
     mapping.quant2id <- do.call(rbind,lapply(mapping.file,function(f) {
       read.table(f,header=TRUE,sep=',',stringsAsFactors=FALSE)
@@ -50,11 +50,11 @@ writePhosphoRSInput <-
     cn <-  colnames(mapping.quant2id)
     if (!all(mapping %in% cn))
       stop("mapping not correct")
-    
+
     colnames(mapping.quant2id)[cn == mapping['id']] <- 'id'
-    colnames(mapping.quant2id)[cn == mapping['peaklist']] <- 'peaklist'  
+    colnames(mapping.quant2id)[cn == mapping['peaklist']] <- 'peaklist'
   }
-  
+
   con.out <- file(phosphoRS.infile,'w')
   cat.f <- function(...) cat(...,"\n",file=con.out,sep="",append=TRUE)
   cat.f("<phosphoRSInput>")
@@ -75,7 +75,7 @@ writePhosphoRSInput <-
   if (!all(ids$spectrum %in% titles))
     stop("Not all id spectrum titles are in MGF titles!\n",
          .sum.bool.c(ids$spectrum %in% titles))
-  
+
   if (length(begin_ions) != length(end_ions))
     stop("mgf file is errorneous, non-matching number",
          " of BEGIN IONS and END IONS tags");
@@ -96,7 +96,7 @@ writePhosphoRSInput <-
       cat.f("    <Spectrum ID='",URLencode(header["TITLE"],reserved=TRUE),"'",
             " PrecursorCharge='",sub("+","",header["CHARGE"],fixed=TRUE),"'",
             " ActivationTypes='",activationType,"'>")
-    
+
       cat.f("    <Peaks>",paste(gsub("\\s+",":",peaks),collapse=","),"</Peaks>")
 
       for (id_i in which(ids$spectrum==title)) {
@@ -145,7 +145,7 @@ calc.delta.score <- function(my.data) {
     if (nrow(x) == 0) return(res);
     res$delta.score.pep <- res[,'score'] - x[which.max(x$score),'score'] # calc delta score w/ max (same pep)
     res$n.loc <- nrow(x) + 1
-    return(res);
+    return(res)
   })
 
   my.data <- merge(pep.n.prot,res,by="peptide",all.y=TRUE)
@@ -160,7 +160,7 @@ calc.pep.delta.score <- function(y,spectrum.col='spectrum',score.col='score',pep
 
   y$n.pep <- 1
   y$n.loc <- 1
-    
+
   ddply(y,"spectrum",function(x) {
     if (nrow(x) == 1) return(x);
     res <- x[which.max(x$score),,drop=FALSE]
@@ -177,7 +177,7 @@ calc.pep.delta.score <- function(y,spectrum.col='spectrum',score.col='score',pep
     if (nrow(y) > 0) {
       res$delta.score.notpep <- res[,'score'] - y[which.max(y$score),'score'] # calc delta score w/ max (different pep)
     }
-    return(res);
+    return(res)
   })
 }
 
@@ -185,7 +185,7 @@ calc.pep.delta.score <- function(y,spectrum.col='spectrum',score.col='score',pep
 filterSpectraDeltaScore <- function(my.data, min.delta.score=10, do.remove=FALSE) {
   if (!"delta.score" %in% colnames(my.data))
     my.data <- calc.delta.score(my.data)
-  
+
   if (!is.null(min.delta.score)) {
     sel.mindeltascore <- my.data[,"delta.score"] >= min.delta.score
     my.data[,"use.for.quant"] <- my.data[,"use.for.quant"] & sel.mindeltascore
@@ -217,7 +217,7 @@ filterSpectraDeltaScore <- function(my.data, min.delta.score=10, do.remove=FALSE
     xx <- x
     xx[x==""] <- 0
     xx[x!=""] <- NA
-    for (i in seq_len(nrow(modifs))) 
+    for (i in seq_len(nrow(modifs)))
       xx[grep(paste0("^",modifs[i,1]),x)] <- modifs[i,2]
 
     if(any(is.na(xx))) stop("Could not convert [",paste0(x[is.na(xx)],collapse=" and "),"] modifstring ",modifstring)
@@ -263,11 +263,11 @@ writeHscoreData <- function(outfile,ids,massfile="defs.txt") {
   }
   sapply(split.modif,function(x) {
     x[length(x)] <- sub(" $","",x[length(x)])
-    modification.pos <- which(x%in%modif)-1 
+    modification.pos <- which(x%in%modif)-1
     if (!is.null(collapse))
       paste(modification.pos,collapse=collapse)
     else {
-      if (and.name) 
+      if (and.name)
         data.frame(modif.pos=modification.pos,modif=name.modif[x[modification.pos+1]],stringsAsFactors=FALSE)
       else
         modification.pos
@@ -283,7 +283,7 @@ writeHscoreData <- function(outfile,ids,massfile="defs.txt") {
            prob <- rep(-1,length(pep))
            pep.pos <- pprob[seq(from=1,to=length(pprob),by=2)]
            pep.prob <- pprob[seq(from=2,to=length(pprob),by=2)]
-           if (!is.null(round.to.frac)) 
+           if (!is.null(round.to.frac))
              pep.prob <- round(pep.prob*round.to.frac)/round.to.frac
            prob[pep.pos] <- pep.prob
 
@@ -307,10 +307,10 @@ writeHscoreData <- function(outfile,ids,massfile="defs.txt") {
   mapply(function(pep,m) {
            m <- m[-c(1,length(m))]
            if (is.null(names(modifs))) {
-             for (mm in modifs) 
+             for (mm in modifs)
                pep[m==mm] <- letters[pep[m==mm]]
            } else {
-             for (i in seq_along(modifs)) 
+             for (i in seq_along(modifs))
                pep[m==modifs[i]] <- paste0(pep[m==modifs[i]],"(",names(modifs)[i],")")
            }
            paste(pep,collapse="")
@@ -323,13 +323,13 @@ writeHscoreData <- function(outfile,ids,massfile="defs.txt") {
 readPhosphoRSOutput <- function(phosphoRS.outfile,simplify=FALSE,pepmodif.sep="##.##",
                                 besthit.only=TRUE) {
   require(XML)
-  doc <- xmlTreeParse(phosphoRS.outfile,useInternalNodes=TRUE)  
+  doc <- xmlTreeParse(phosphoRS.outfile,useInternalNodes=TRUE)
   spectra <- xmlRoot(doc)[["Spectra"]]
   res <- xmlApply(spectra,function(spectrum) {
     spectrum.id <- URLdecode(xmlAttrs(spectrum)["ID"])
     #message(spectrum.id)
     res.s <- xmlApply(spectrum[["Peptides"]],function(peptide) {
-      pep.id <- strsplit(xmlAttrs(peptide)["ID"],pepmodif.sep,fixed=TRUE)[[1]]    
+      pep.id <- strsplit(xmlAttrs(peptide)["ID"],pepmodif.sep,fixed=TRUE)[[1]]
       #message(pep.id[1])
       site.probs <- t(xmlSApply(peptide[["SitePrediction"]],xmlAttrs))
       isoforms <- t(xmlSApply(peptide[["Isoforms"]],function(isoform) {
@@ -341,13 +341,13 @@ readPhosphoRSOutput <- function(phosphoRS.outfile,simplify=FALSE,pepmodif.sep="#
         modifstring[modifstring=='PHOS'] <- ''
         modifstring[as.numeric(seqpos)+1] <- 'PHOS'
         modifstring <- paste(modifstring,collapse=":")
- 
+
         if (length(seqpos > 1)) seqpos <- paste(seqpos,collapse="&")
         c(modif=modifstring,
           pepscore=xmlAttrs(isoform)[['PepScore']],
           pepprob=xmlAttrs(isoform)[['PepProb']],
           seqpos=seqpos)
-      }))   
+      }))
 
       #rownames(isoforms) <- NULL
       storage.mode(site.probs) <- "numeric"
@@ -416,7 +416,7 @@ modif.sites <- function(protein.group,protein.g=reporterProteins(protein.group),
            isoform.acs <- names(ip)[ip==my.protein.g]
            res <- lapply(isoform.acs,function(ac) {
                          sel <- pi[,"protein"] == ac
-                         pep.pos <- .convertModifToPos(pi[sel,"modif"],modif,simplify=FALSE,collapse=NULL) 
+                         pep.pos <- .convertModifToPos(pi[sel,"modif"],modif,simplify=FALSE,collapse=NULL)
                          modif.pos <- unlist(mapply(function(start.pos,pep.posi) start.pos + pep.posi -1,
                                                     pi[sel,"start.pos"],pep.pos))
 
@@ -463,24 +463,24 @@ observedKnownSites <- function(protein.group,protein.g,ptm.info,modif,modificati
     stop("no protein info attached to protein.group: see ?getProteinInfoFromUniprot on how to get it.")
 
   protein.length <- as.numeric(proteinInfo(protein.group,protein.ac=isoform.ac,select="length") )
-  if(all(is.na(protein.length))) 
+  if(all(is.na(protein.length)))
     stop("no protein info for ",isoform.ac,"; need protein length and sequence")
 
- 
+
   obs.peptides <- observable.peptides(proteinInfo(protein.group,protein.ac=isoform.ac,select="sequence"),nmc=2)
   possible.sites <- t(sapply(seq_len(protein.length),function(p) c(possible.nmc1=any(p>=obs.peptides$start & p<=obs.peptides$stop & obs.peptides$mc <=1),
                                                                    possible.nmc2=any(p>=obs.peptides$start & p<=obs.peptides$stop & obs.peptides$mc <=2))))
   my.ptm.info <- ptm.info[ptm.info$isoform_ac==ifelse(grepl("-[0-9]$",isoform.ac),
                                                    isoform.ac,paste(isoform.ac,"-1",sep="")),]
-  if (!is.null(modification.name)) 
+  if (!is.null(modification.name))
     my.ptm.info <- my.ptm.info[my.ptm.info$modification.name%in%modification.name,]
- 
+
   # TO CHECK: first_position might be bigger than protein.length
   known.sites <- rep(FALSE,protein.length)
   if (nrow(my.ptm.info) > 0)
     known.sites[my.ptm.info$first_position] <- TRUE
 
-  
+
   pi <- protein.group@peptideInfo
   sel.has.modif <- sapply(strsplit(pi[,"modif"],":"),function(x) any(x %in% modif))
   pi <- pi[pi[,"protein"]==isoform.ac & sel.has.modif,]
@@ -525,36 +525,36 @@ getPeptideModifContext <- function(protein.group,modif,n.aa.up=7,n.aa.down=7) {
                               proteinInfo(protein.group)[,'sequence'],
                               paste0(rep("_",n.aa.up),collapse="")) # enlarge sequence in case peptide starts in the beginning / end
   names(protein.sequences) <- proteinInfo(protein.group)[,'accession']
-  
+
   pep.modif.context <- mapply(function(pepmodifs,protein.ac,pep) {
     my.seq <- protein.sequences[protein.ac]
     if (is.na(my.seq)) {
       warning("No sequence for ",protein.ac)
       return(NA)
     }
-    
+
     peptide.startpos <- gregexpr(pep,my.seq)[[1]]
     if (peptide.startpos[1] == -1) {
       warning("Peptide [",pep,"] could not be matched to ",protein.ac)
-      return(NA)    
+      return(NA)
     }
 
     pepmodifs[length(pepmodifs)] <- sub(" $","",pepmodifs[length(pepmodifs)])
     modification.positions <- which(pepmodifs%in%modif)-1
-    if (length(modification.positions) == 0) 
+    if (length(modification.positions) == 0)
       return(NA)
-    
+
     paste(sapply(peptide.startpos,function(pep.pos) {
       modification.positions.in.protein <- pep.pos + modification.positions - 1
-      res <- paste(sapply(modification.positions.in.protein,function(pos) 
+      res <- paste(sapply(modification.positions.in.protein,function(pos)
                           substr(my.seq,pos-n.aa.down,pos+n.aa.up)),collapse=",")
-    
-      if (nchar(res) < n.aa.up+n.aa.down+1) 
+
+      if (nchar(res) < n.aa.up+n.aa.down+1)
         stop("extracted pattern does not have the length it should have")
       res
     }),collapse=",")
   },strsplit(paste0(peptide.info[,'modif']," "),":"),
-    peptide.info[,'protein'], 
+    peptide.info[,'protein'],
     peptide.info[,'real.peptide'])
 
   # get pep-modif context

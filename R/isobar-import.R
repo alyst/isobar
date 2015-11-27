@@ -70,8 +70,8 @@
 
   assayDataElements$ions <- data.ions
   assayDataElements$mass <- data.mass
- 
-  
+
+
   if (!identical(spectra.ids,rownames(data.ions))) {
     id.n.quant <- intersect(spectra.ids,rownames(data.mass))
     id.not.quant <- setdiff(spectra.ids,rownames(data.mass))
@@ -81,7 +81,7 @@
                                     "If the search was preformed with Mascot, set readIBSpectra argument decode.titles=TRUE,\n",
                                     " or in the properties file for report generation:\n",
                                     "   readIBSpectra.args=list(decode.titles=TRUE)")
-    
+
     if (length(quant.not.id) > 0)
       message(" for ",length(quant.not.id)," spectra ",
               "[",round(length(quant.not.id)*100/nrow(data.mass),2),"%],",
@@ -107,7 +107,7 @@
 
   # filter based on fragment precision
   if (!is.null(fragment.precision)) {
-    
+
     min.masses <- reporterTagMasses - fragment.precision/2
     max.masses <- reporterTagMasses + fragment.precision/2
     for (i in seq_len(nrow(assayDataElements$mass))) {
@@ -187,7 +187,7 @@
 
   VARMETADATA=data.frame(labelDescription=label.desc[names(.SPECTRUM.COLS)],
                          row.names=.SPECTRUM.COLS)
-	    
+
   return(VARMETADATA[nn,,drop=FALSE])
 }
 
@@ -212,9 +212,9 @@
         my.scores <- scores[identifications[,SC['SEARCHENGINE']]==se]
         summary(my.scores,na.rm=TRUE)}))
       stats <- cbind(stats,score.stats)
-    } 
+    }
     print(stats)
-    
+
   }
   identifications
 }
@@ -222,7 +222,7 @@
 .merge.identifications.full <- function(identifications, ...) {
   SC <- .SPECTRUM.COLS[.SPECTRUM.COLS %in% colnames(identifications)]
   ## Substitute Isoleucins with Leucins (indistinguishable by Masspec)
-  if (!.PEPTIDE.COLS['REALPEPTIDE'] %in% colnames(identifications)) 
+  if (!.PEPTIDE.COLS['REALPEPTIDE'] %in% colnames(identifications))
      identifications <- .fix.il.peptide(identifications)
 
   ## Separate protein columns (focus on peptide-spectrum matches)
@@ -233,7 +233,7 @@
 
   ## Merge identifications
   if (max(table(identifications[,SC['SPECTRUM']])) > 1) {
-    if (SC['DISSOCMETHOD'] %in% colnames(identifications) && 
+    if (SC['DISSOCMETHOD'] %in% colnames(identifications) &&
         length(unique(identifications[,SC['DISSOCMETHOD'] ]))) {
       identifications <- dlply(identifications,'dissoc.method',.merge.identifications,...)
       # rbind separately to assure equal column names
@@ -244,7 +244,7 @@
     }
   }
   identifications <- .remove.duplications(identifications)
-  
+
   ## Merge back the protein mapping
   merge(pept.n.prot,identifications,by="peptide")
 }
@@ -253,7 +253,7 @@ setMethod("initialize","IBSpectra",
     function(.Object,identifications=NULL,data.ions=NULL,data.mass=NULL,
              proteinGroupTemplate=NULL,fragment.precision=NULL,
              assayDataElements=list(),allow.missing.columns=FALSE,
-             write.excluded.to=NULL,...) { 
+             write.excluded.to=NULL,...) {
 
   if (is.null(identifications))
     return(callNextMethod(.Object,...))
@@ -267,7 +267,7 @@ setMethod("initialize","IBSpectra",
   SC <- .SPECTRUM.COLS[.SPECTRUM.COLS %in% colnames(identifications)]
 
   ## Substitute Isoleucins with Leucins (indistinguishable by Masspec)
-  if (!.PEPTIDE.COLS['REALPEPTIDE'] %in% colnames(identifications)) 
+  if (!.PEPTIDE.COLS['REALPEPTIDE'] %in% colnames(identifications))
      identifications <- .fix.il.peptide(identifications)
 
   ## Separate protein columns (focus on peptide-spectrum matches)
@@ -278,7 +278,7 @@ setMethod("initialize","IBSpectra",
   ## Merge identifications
   if (max(table(identifications[,SC['SPECTRUM']])) > 1) {
     message("merging identifications")
-    if (SC['DISSOCMETHOD'] %in% colnames(identifications) && 
+    if (SC['DISSOCMETHOD'] %in% colnames(identifications) &&
         length(unique(identifications[,SC['DISSOCMETHOD'] ]))) {
       identifications <- dlply(identifications,'dissoc.method',.merge.identifications,...)
       # rbind separately to assure equal column names
@@ -289,10 +289,10 @@ setMethod("initialize","IBSpectra",
     }
   }
   identifications <- .remove.duplications(identifications)
- 
+
   # Create ProteinGroup
   proteinGroup <- ProteinGroup(merge(pept.n.prot,identifications,by="peptide"),template=proteinGroupTemplate)
-  
+
   ## Get intensities and masses in assayDataElements
   if (is.null(data.ions))
     data.ions <- .get.quant(identifications,.PEAKS.COLS['IONSFIELD'],reporterTagNames)
@@ -314,16 +314,16 @@ setMethod("initialize","IBSpectra",
     # not perfect - better: set spectra of peptides shared between groups to FALSE
     #                            and spectra with no values
     identifications[,.SPECTRUM.COLS['USEFORQUANT']] <- TRUE
-  }  
+  }
 
   fdata <- identifications[,colnames(identifications) %in% .SPECTRUM.COLS]
 
   rownames(fdata) <- fdata[,'spectrum']
   featureData <- new("AnnotatedDataFrame",data=fdata,
                      varMetadata=.get.varMetaData(fdata))
-	   
+
   assayData=do.call(assayDataNew, assayDataElements, envir=parent.frame())
-  
+
   ## create ibspectra object
   callNextMethod(.Object,
       assayData=assayData,
@@ -357,7 +357,7 @@ setMethod("readIBSpectra",
     function(type,id.file,peaklist.file,sep="\t",
              mapping.file=NULL,mapping=c(quantification.spectrum = "hcd",identification.spectrum = "cid"),
              id.file.domap=NULL,identifications.format=NULL,decode.titles=FALSE,...) {
-      
+
       id.data <- .read.identifications(id.file,sep=sep,
                                        mapping=mapping.file,mapping.names=mapping,
                                        identifications.quant=id.file.domap,
@@ -370,7 +370,7 @@ setMethod("readIBSpectra",
 ##' readIBSpectra - read IBSpectra object from files
 ##'
 ##' <details>
-##' @title 
+##' @title
 ##' @param type [character] IBSpectra type
 ##' @param id.file [character] file of format ibspectra.csv or
 ##' mzid. If format is ibspectra.csv, it may also contain quantitative
@@ -387,10 +387,10 @@ setMethod("readIBSpectra",
 ##' but corresponding spectra. E.g. HCD-CID dissociation
 ##' @param mapping [named character] column number or name for
 ##' 'peaklist' and 'id' spectra.
-##' @param mapping.file.readopts 
-##' @param peaklist.format 
-##' @param identifications.format 
-##' @return IBSpectra object of type 
+##' @param mapping.file.readopts
+##' @param peaklist.format
+##' @param identifications.format
+##' @return IBSpectra object of type
 ##' @author Florian P Breitwieser
 setMethod("readIBSpectra",
           signature(type="character",id.file="data.frame",peaklist.file="character"),
@@ -398,7 +398,7 @@ setMethod("readIBSpectra",
              annotate.spectra.f=NULL,
              peaklist.format=NULL,scan.lines=0,
              fragment.precision=NULL,fragment.outlier.prob=NULL,...) {
-      
+
       if (is.function(annotate.spectra.f)) {
         id.file <- annotate.spectra.f(id.file,peaklist.file)
       }
@@ -407,8 +407,8 @@ setMethod("readIBSpectra",
       quant <- .read.peaklist(peaklist.file,peaklist.format,
                               .Object@reporterTagMasses,.Object@reporterTagNames,
                               scan.lines,fragment.precision,fragment.outlier.prob,
-                              id.data=id.file) 
-     
+                              id.data=id.file)
+
       new(type,identifications=id.file,quant[[2]],data.ions=quant[[1]],...)
     }
 )
@@ -428,7 +428,7 @@ setMethod("readIBSpectra",
       else if (grepl(".mcn$",peaklist.f,ignore.case=TRUE))peaklist.format.f <- "mcn"
       else if (grepl(".intensities.csv$",peaklist.f,ignore.case=TRUE))peaklist.format.f <- "csv"
       else
-        stop(paste0("cannot parse file ",peaklist.f," - cannot deduce format (mgf or mcn)"))          
+        stop(paste0("cannot parse file ",peaklist.f," - cannot deduce format (mgf or mcn)"))
     }
 
     if (tolower(peaklist.format.f) == "mgf") {
@@ -456,11 +456,11 @@ setMethod("readIBSpectra",
       res <- read.delim(peaklist.f,stringsAsFactors=FALSE)
       message(" done")
       if (!"spectrum" %in% colnames(res)) stop("'spectrum' column is missing from peaklist CSV")
-      if (sum(.grep_columns(res,"ions$")) < length(reporterTagNames)) 
+      if (sum(.grep_columns(res,"ions$")) < length(reporterTagNames))
         stop("Not all neccessary intensity columns [",paste0(reporterTagNames,"_ions"),"] in peaklist CSV")
-      if (sum(.grep_columns(res,"mass$")) < length(reporterTagNames)) 
+      if (sum(.grep_columns(res,"mass$")) < length(reporterTagNames))
         stop("Not all neccessary reporter mass columns [",paste0(reporterTagNames,"_mass"),"] in peaklist CSV")
-      
+
       data.titles <- c(data.titles,res[,"spectrum"])
       data.ions <- rbind(data.ions,as.matrix(res[,.grep_columns(res,"ions$")]))
       data.mass <- rbind(data.mass,as.matrix(res[,.grep_columns(res,"mass$")]))
@@ -493,7 +493,7 @@ setMethod("readIBSpectra",
     stop(sum(is.na(rownames(data.ions)))," rownames in data.ions are NA")
   if (any(is.na(rownames(data.mass))))
     stop(sum(is.na(rownames(data.ions)))," rownames in data.ions are NA")
- 
+
   return(list(data.ions,data.mass))
 }
 
@@ -507,7 +507,7 @@ setMethod("readIBSpectra",
   #                      "not all identified spectra could be matched!\n",
   #                      "\tx ... identified spectra\n",
   #                      "\ty ... mapped spectra\n")
- 
+
   spectra.map <- .as.vect(mapping.quant2id,1,2)
   .stopiflengthnotequal(spectrumtitles,
                         spectra.map[spectrumtitles],
@@ -545,7 +545,7 @@ read.mzid <- function(filename) {
     name=xpathSApply(doc,paste0(root,"/x:DataCollection/x:Inputs/x:SearchDatabase"),
       xmlGetAttr,name="name",namespaces=ns),stringsAsFactors=FALSE
   )
-   
+
   modification.mapping.df <- t(do.call(cbind,
                                   xpathApply(doc,paste0(root,"/x:AnalysisProtocolCollection/x:SpectrumIdentificationProtocol/x:ModificationParams/x:SearchModification"),
                                              function(modif) {
@@ -559,7 +559,7 @@ read.mzid <- function(filename) {
                  "/mzIdentML/AnalysisProtocolCollection/SpectrumIdentificationProtocol/ModificationParams/SearchModification")))
   },namespaces=ns)))
 
-  unknown.modif <- modification.mapping.df[,'name']=='unknown modification' | 
+  unknown.modif <- modification.mapping.df[,'name']=='unknown modification' |
                      modification.mapping.df[,'accession']=='MS:1001460'
   if (any(unknown.modif)) {
     if (! 'value' %in% colnames(modification.mapping.df)) {
@@ -580,7 +580,7 @@ read.mzid <- function(filename) {
                                                                          massDelta=xmlGetAttr(m,name="monoisotopicMassDelta")),
                                       namespaces=ns)
 
-          
+
            modifstring <- character(nchar(peptide.seq)+2)
 
            if (length(loc.n.delta) > 0) {
@@ -588,12 +588,12 @@ read.mzid <- function(filename) {
              if (any(is.na(modif.names)))
                modif.names <- xpathSApply(pep,"x:Modification/x:cvParam[@cvRef='UNIMOD']",xmlGetAttr,name='name',namespaces=ns)
 
-             if (length(modif.names) < ncol(loc.n.delta)) 
+             if (length(modif.names) < ncol(loc.n.delta))
                stop("modif names and delta have different size")
- 
+
              modifstring[as.numeric(loc.n.delta[1,])+1] <- modif.names
            }
-           
+
            c(peptide.ref=peptide.ref,peptide=peptide.seq,modif=paste(modifstring,collapse=":"))
          }))
 
@@ -619,7 +619,7 @@ read.mzid <- function(filename) {
   # map PeptideEvidence attribute names to isobar columns
   pe.attr.names <- c(id="peptide.ev.ref",start="start.pos",end="end.pos",pre="aa.before",post="aa.after",
                      missedCleavages="nmc",isDecoy="is.decoy",DBSequence_Ref="dbseq.ref",dBSequence_Ref="dbseq.ref")
-  
+
   message("spectrum mapping")
   spectrumIdentifications <-
     xpathApply(doc,paste0(root,"/x:DataCollection/x:AnalysisData/x:SpectrumIdentificationList/x:SpectrumIdentificationResult"),
@@ -640,9 +640,9 @@ read.mzid <- function(filename) {
     if (length(sii) == 0 || length(sii) > 1) return (NULL)
     #"more than one match for [ x:SpectrumIdentificationItem[@passThreshold='true' and @rank='1'] ]")
     # TODO: There will be always two times the same score with peptides with just an I/L difference
-    
+
     sii <- sii[[1]]
- 
+
      scores <- unlist(xpathApply(sii,"x:cvParam",function(cvp) {
                            switch(xmlGetAttr(cvp,name='name'),
                                   "Scaffold: Peptide Probability"=c(scaffold.pepprob=xmlGetAttr(cvp,name="value")),
@@ -696,7 +696,7 @@ read.mzid <- function(filename) {
 ##' MGF files list m/z and intensities for each spectrum. .read.mgf
 ##' extracts m/z and intensity pairs of masses corresponding to isobaric
 ##' tag masses (within a fragment precision).
-##' @title 
+##' @title
 ##' @param filename [character] file name of one or multiple files in MGF format
 ##' @param type [character] denoting IBSpectra class - used to get
 ##'             reporter masses and reporter names.
@@ -721,7 +721,7 @@ read.mzid <- function(filename) {
   nReporter <- length(reporterMasses)
   min.mass <- min(reporterMasses)-fragment.precision/2
   max.mass <- max(reporterMasses)+fragment.precision/2
-  
+
   ## read (and concatenate if multiple) mgf files
   input <- c()
   for (f in filename) {
@@ -737,7 +737,7 @@ read.mzid <- function(filename) {
   }
   if (substitute.dta)
     input <- sub(".dta.*$",".dta",input)
-  
+
   ## index mgf file content: positions of BEGIN and END IONS
   begin_ions <- which(input=="BEGIN IONS")
   end_ions <- which(input=="END IONS")
@@ -747,7 +747,7 @@ read.mzid <- function(filename) {
 
   bnd <- data.frame(begin=begin_ions,
                     end=end_ions)
-  
+
   if (!is.null(spectra)) {
     ## filtering to take only spectra defined in spectra
     ## all.titles <- .trim(sapply(strsplit(grep("TITLE",input,value=T),"="),function(x) x[2] )) # not efficient
@@ -778,7 +778,7 @@ read.mzid <- function(filename) {
 
   ## if all spectra are of equal length, apply returns a matrix
   ##  convert to list
-  if (is.matrix(all.spectra)) 
+  if (is.matrix(all.spectra))
     all.spectra <- split(all.spectra,col(all.spectra))
 
   ## extract information from each spectrum
@@ -786,9 +786,9 @@ read.mzid <- function(filename) {
     header <- .strsplit_vector(x[grep("^[A-Z]",x)],"=")
     numbers <- do.call(rbind,strsplit(x[grep("^1..\\.",x)],"\\s"))
     mzi.mass <- as.numeric(numbers[,1])
-    
+
     rr <- c(title=header["TITLE"])
-    
+
     sel <- mzi.mass > min.mass & mzi.mass < max.mass
     if (any(sel)) {
       mzi.mass <- mzi.mass[sel]
@@ -808,7 +808,7 @@ read.mzid <- function(filename) {
           return(c(mzi.mass[pos],mzi.ions[pos]))
         else
           return(c(NA,NA))
-      }))) 
+      })))
     } else {
       rr <- c(rr,rep(NA,nReporter*2))
     }
@@ -822,13 +822,13 @@ read.mzid <- function(filename) {
     stop("error reading MGF file - could not parse masses and intensities.\n",
          "Check the mapping id <-> peaklist.")
   }
- 
+
   mass <- apply(result[,seq(from=2,to=ncol(result),by=2)],2,as.numeric)
   ions <- apply(result[,seq(from=3,to=ncol(result),by=2)],2,as.numeric)
-     
+
   ## only select spectra with itraq masses detected
   sel = apply(mass,1,function(x) any(!is.na(x)))
-      
+
   if (!any(sel)) {
     stop("No values could be extracted from MGF ",filename,"\n",
          "with fragment precision ",fragment.precision,".\n")
@@ -849,7 +849,7 @@ read.mzid <- function(filename) {
 
   ions <- ions[sel,,drop=FALSE]
   mass <- mass[sel,,drop=FALSE]
- 
+
   spectrumtitles <- .trim(result[sel,1])
 
   if (ncol(ions) != length(reporterNames) || ncol(mass) != length(reporterNames)) {
@@ -859,7 +859,7 @@ read.mzid <- function(filename) {
   dimnames(ions) <- list(spectrumtitles,reporterNames)
   dimnames(mass) <- list(spectrumtitles,reporterNames)
   rm(result)
-  
+
   return(list(ions=ions, mass=mass,
               spectrumtitles=spectrumtitles))
 }
@@ -871,12 +871,12 @@ read.mzid <- function(filename) {
       stop("filename should be a data.frame or character")
     if (!file.exists(filename))
       stop("idfile ",filename," defined, but does not exist")
-    
+
     is.format <- function(y,ext)
-      identical(identifications.format,y) || 
+      identical(identifications.format,y) ||
         any(sapply(ext,function(iext) grepl(paste0(iext,"$"),filename)))
-    
-    ext.def <- 
+
+    ext.def <-
     list(mzid      = list(ext=c("mzid"),f=read.mzid),
          rockerbox = list(ext=c("peptides.[ct]sv"),f=.read.rockerbox),
          msgf      = list(ext=c("msgfp.csv","tsv"),f=.read.msgfp.tsv),
@@ -903,7 +903,7 @@ read.mzid <- function(filename) {
 .read.idfile <- function(id.file,identifications.format=NULL,sep="\t",
                          decode.titles=FALSE,trim.titles=FALSE,log=NULL,all.cols=FALSE,...) {
   if (!is.data.frame(id.file)) {
-    if (!(is.list(id.file) || is.character(id.file))) 
+    if (!(is.list(id.file) || is.character(id.file)))
       stop("id.file argument of .read.idfile should be a data frame, character or list")
 
     if (all(sapply(id.file,is.character)))
@@ -915,7 +915,7 @@ read.mzid <- function(filename) {
       stop()
 
     rm(id.file)
-  
+
     id.colnames <- lapply(seq_along(id.data),function(s.i) colnames(id.data[[s.i]]))
     colnames.equal <- all(sapply(id.colnames,
                                  function(cn) identical(cn,id.colnames[[1]])))
@@ -952,7 +952,7 @@ read.mzid <- function(filename) {
   if ('accession' %in% colnames(id.data)) {
     if (all(grepl(sprintf("%s\\|%s",.uniprot.pattern.ac,.uniprot.pattern.id),id.data[,.PROTEIN.COLS['PROTEINAC']]))) {
       split.ac <- strsplit(id.data[,.PROTEIN.COLS['PROTEINAC']],"|",fixed=TRUE)
-      id.data[,.PROTEIN.COLS['PROTEINAC']] <- sapply(split.ac,function(x) x[1]) 
+      id.data[,.PROTEIN.COLS['PROTEINAC']] <- sapply(split.ac,function(x) x[1])
       id.data[,.PROTEIN.COLS['NAME']] <- sapply(split.ac,function(x) ifelse(length(x) == 2, x[2], NA))
     }
   }
@@ -973,7 +973,7 @@ read.mzid <- function(filename) {
   ## transform modification (TODO)
   data.r$modif <- data.r$modifications
   ## end transform
-  
+
   ## transform 'all.peptide.matches' to ac and start.pos
   split.acs <- strsplit(data.r$all.protein.matches,"; ")
   names(split.acs) <- data.r$all.protein.matches
@@ -982,7 +982,7 @@ read.mzid <- function(filename) {
     start.pos <- sapply(strsplit(y[,2],"-",fixed=TRUE),
                         function(z) if(all(!is.na(as.numeric(z))) && length(z) == 2) as.numeric(z[1])
                         else stop("not numeric"))
-    data.frame(accession=y[,1],start.pos=start.pos)  
+    data.frame(accession=y[,1],start.pos=start.pos)
   })
   data.r <- merge(data.r,ac.n.startpos,by.x="all.protein.matches",by.y=".id")
   data.r$all.protein.matches <- NULL
@@ -1109,7 +1109,7 @@ read.mzid <- function(filename) {
     ids.merged <- ids.merged[!ids.merged[,.SPECTRUM.COLS['SPECTRUM']] %in% names(tt)[tt>1],]
   }
 
-  ids.merged[,.SPECTRUM.COLS['SEARCHENGINE']] <- 
+  ids.merged[,.SPECTRUM.COLS['SEARCHENGINE']] <-
 	  apply(ids.merged[,score.cols],1,function(x) { paste(names(ids.split)[!is.na(x)],collapse="&") })
   return(ids.merged)
 }
@@ -1159,13 +1159,13 @@ read.mzid <- function(filename) {
 
 .do.resolve.conflicts <- function(ids, colname, resolve.colnames, resolve.f) {
   if (length(ids) == 0)
-    return(NULL) 
+    return(NULL)
   if (length(ids) == 1)
     return(ids)
 
   ids[,colname] <- apply(ids[,resolve.colnames],1,resolve.f)
   if (any(is.na(ids[,colname])))
-    message("removing ",sum(is.na(ids[,colname]))) 
+    message("removing ",sum(is.na(ids[,colname])))
   ids <- ids[!is.na(ids[,colname]),]
   if (nrow(ids) == 0)
 	  return(NULL)
@@ -1181,7 +1181,7 @@ read.mzid <- function(filename) {
   return(ids)
 }
 
-.resolve.modifications <- function(df,colname, modif.cols, standard.modif) {
+.resolve.modifications <- function(df, colname, modif.cols, standard.modif) {
   message("Resolving modifications")
   if (is.character(modif.cols))
     modif.cols <- which(colnames(df) %in% modif.cols)
@@ -1219,7 +1219,7 @@ read.mzid <- function(filename) {
     x[,colname] <- modifs[1]
     x[,'note'] <- note
     return(x)
-  })  
+  })
 }
 
 .max.uniq <- function(tt) sum(tt==max(tt)) == 1
@@ -1239,7 +1239,7 @@ read.mzid <- function(filename) {
 	  n.max.ids <<- n.max.ids + 1
 	  return(x[which.max(n.ids),,drop=FALSE])
 	}
-        
+
 	## resolve peptide differnces
         if (!allequal(x[,'peptide'])) {                ## different peptides identified
 	  pep.ids <- by.y(n.ids,x[,'peptide'],sum)
@@ -1250,7 +1250,7 @@ read.mzid <- function(filename) {
 	    return(NULL)
 	  }
 	}
-	
+
 	## all equal peptides, different modification positions
         if (!allequal(x[,'peptide'])) {
 	  message("ERROR while merging: psm peptides should be equal, but they aren't.")
@@ -1275,12 +1275,12 @@ read.mzid <- function(filename) {
           x[1,score.cols] <- as.numeric(sapply(x[,score.cols],skipna))
 	  x[1,'charge'] <- max(x[,'charge'])
 	  x <- x[1,,drop=FALSE]
-	} else { 
+	} else {
           message("Why is the modif equal? ")
 	  print(rbind(x,is.equal=apply(x,2,allequal)))
 	  stop()
 	}
-	
+
 	return(x)
   })
   message(" resolving differing ",length(unique(identifications[,'spectrum']))," identifications: " )
@@ -1338,7 +1338,7 @@ read.mzid <- function(filename) {
   if ('SEARCHENGINE' %in% names(SC) &&                               ## search engine column is present
       length(unique(identifications[,SC['SEARCHENGINE']])) > 1 &&    ## there are multiple search engines defines
       !any(grepl('^score\\.',colnames(identifications))))              ## the individual score.ENGINENAME are not present
-  {                     
+  {
     if (any(grepl("|",identifications[,SC['SEARCHENGINE']],fixed=TRUE))) {
       identifications <- .dissect.search.engines(identifications)               ## dissect merged id columns
     } else {
@@ -1368,7 +1368,7 @@ read.mzid <- function(filename) {
     if (!is.data.frame(mapping)) stop("mapping must be a data.frame or valid file name")
     if (ncol(mapping) > 2) stop("only one column in mapping")
 
-    if (is.null(mapping.names)) { 
+    if (is.null(mapping.names)) {
       if (ncol(mapping) > 2) stop("more than one column in mapping data - mapping.names are therefore required")
       message("trying to assess right mapping")
       cn <- apply(mapping,2,function(x) sum(x %in% identifications[,.SPECTRUM.COLS['SPECTRUM']]))
@@ -1396,7 +1396,7 @@ read.mzid <- function(filename) {
       identifications.quant[,.SPECTRUM.COLS['DISSOCMETHOD']] <- "hcd"
       #identifications.quant[,.SPECTRUM.COLS['DISSOCMETHOD']] <- names(mapping.names)[mapping.names=='quantification.spectrum']
       #if (.SPECTRUM.COLS['DATABASE'] %in% colnames(identifications) &&
-      #    !.SPECTRUM.COLS['DATABASE'] %in% colnames(identifications.quant)) 
+      #    !.SPECTRUM.COLS['DATABASE'] %in% colnames(identifications.quant))
       #  identifications[,.SPECTRUM.COLS['DATABASE']] <- NULL
 
       intersect.ids <- intersect(colnames(identifications),colnames(identifications.quant))
@@ -1418,7 +1418,7 @@ read.mzid <- function(filename) {
 
 ## read MSGF+ tab-separated identification files
 .read.msgfp.tsv <- function(filename,filter.rev.hits=FALSE) {
-  if (is.data.frame(filename)) 
+  if (is.data.frame(filename))
     ib.data <- filename
   else
     id.data <- read.delim(filename, sep="\t", stringsAsFactors=FALSE)
@@ -1432,7 +1432,7 @@ read.mzid <- function(filename) {
   sel <- names(.MSGF.MAPPINGCOLS) %in% names(c(.SPECTRUM.COLS,.PEPTIDE.COLS))
   data.r <- id.data[,.MSGF.MAPPINGCOLS[sel]]
   colnames(data.r) <- c(.SPECTRUM.COLS,.PEPTIDE.COLS)[names(.MSGF.MAPPINGCOLS)[sel]]
-  
+
   ib.df <- cbind(ib.df,data.r)
 
   ib.protnpep <-  .convert.msgfp.protein(unique(ib.df[,c('Protein','peptide')]),filter.rev.hits=filter.rev.hits)
@@ -1448,7 +1448,7 @@ read.mzid <- function(filename) {
   modif.masses.r <- setNames(c(names(modif.masses)),c(paste0("+",modif.masses)))
   modifs <- strsplit(paste0(peptide,"+"),"[A-Z]")
   #sort(table(unlist(modifs)))
-  modif.p <- sapply(modifs,function(x) { 
+  modif.p <- sapply(modifs,function(x) {
                                          x[length(x)] <- sub(".$","",x[length(x)]);
                                          x[x!=""] <- modif.masses.r[x[x!=""]];
                                          x
@@ -1457,12 +1457,12 @@ read.mzid <- function(filename) {
     stop("NA in modifications - did not map")
   #sel <- sapply(modif.p,function(x) any(is.na(x)))
   #modifs[sel]
-  
+
   pep.seq <- gsub("[+0-9\\.]","",peptide)
   if (any(nchar(pep.seq)+1 != sapply(modif.p,length)))
     stop("some modif sequences are not of correct length!")
   #cbind(peptide,pep.seq,nchar(pep.seq),sapply(modif.p,length))
-  
+
   modif.i <- mapply(function(pep,modif) {
     pep <- c("Nterm",pep)
     sel.m <- modif!="" & !grepl("_",modif)
@@ -1470,8 +1470,8 @@ read.mzid <- function(filename) {
     paste(modif,collapse=":")
   } ,strsplit(pep.seq,""),modif.p)
 
-  
-  
+
+
   return(data.frame(peptide=pep.seq,modif=paste0(modif.i,":"),stringsAsFactors=FALSE))
 }
 
@@ -1482,7 +1482,7 @@ read.mzid <- function(filename) {
   # TODO: extract pre and post AAs
 
   split.protein <- strsplit(protein.n.peptide[,1],"[;|]")
-  res <- lapply(seq_along(split.protein), function(i) { 
+  res <- lapply(seq_along(split.protein), function(i) {
                 y <- split.protein[[i]]
                 cbind(peptide=protein.n.peptide[i,2],
                       database=y[seq(from=1,to=length(y),by=3)],
@@ -1491,11 +1491,9 @@ read.mzid <- function(filename) {
   res <- as.data.frame(do.call(rbind,res),stringsAsFactors=FALSE)
   res$is.decoy <- grepl("^XXX_",res[,'database'])
   print(c(is.decoy=.sum.bool(res$is.decoy)))
-  
+
   if (isTRUE(filter.rev.hits))
     res <- res[!res$is.decoy,]
 
   return(res)
 }
-
-

@@ -4,7 +4,7 @@ setAs("MSnSet","IBSpectra",function(from) {
   lowerMz <- matrix(q$lowerMz,byrow=TRUE,ncol=ncol(ions))
   upperMz <- matrix(q$upperMz,byrow=TRUE,ncol=ncol(ions))
   maxInt <- matrix(q$maxInt,byrow=TRUE,ncol=ncol(ions))
-  
+
   data <- fData(from)[,c("ProteinAccession","PeptideSequence","charge","precursor.mz","retention.time","spectrum")]
   colnames(data) <- c("accession","peptide","charge","exp.mass","retention.time","spectrum")
 
@@ -17,7 +17,7 @@ setAs("MSnSet","IBSpectra",function(from) {
                      "unknown")
   if (identical(my.class,"unknown"))
     stop("I do not know how to map MSnSet w/ columns [",paste(colnames(ions),collapse=","),"] to an IBSpectra object.")
-         
+
   o <- new(my.class)
   rownames(ions) <- data$spectrum
   colnames(ions) <- o@reporterTagNames
@@ -39,7 +39,7 @@ setAs("MSnSet","IBSpectra",function(from) {
 setAs("IBSpectra","MSnSet",function(from) {
   library(MSnbase)
   ## based on quantify.MSnExp from MSnbase
-  
+
   elems <- assayDataElementNames(from)
   exprs <- reporterIntensities(from)
 
@@ -64,7 +64,7 @@ setAs("IBSpectra","MSnSet",function(from) {
   } else {
     stop("Cannot convert object")
   }
-  
+
   lowerMz <- get.elem("lowerMz","mass")
   upperMz <- get.elem("upperMz","mass")
   maxInt  <- get.elem("maxInt",matrix(NA,nrow=nrow(lowerMz),ncol=ncol(lowerMz)))
@@ -96,7 +96,7 @@ setAs("IBSpectra","MSnSet",function(from) {
                collision.energy="NA")
   df <- ibSpectra.as.concise.data.frame(from)
   df[,"NA"] <- NA
-  
+
   fd <- df[,mapping]
   rownames(fd) <- fd[,"spectrum"]
   colnames(fd) <- names(mapping)
@@ -105,7 +105,7 @@ setAs("IBSpectra","MSnSet",function(from) {
                     data=data.frame(mz=reporters@mz,
                       reporters=reporters@name,
                       row.names=reporters@reporterTagNames))
-  
+
   msnset <- new("MSnSet",
                 qual=.qual,
                 exprs=.exprs,
@@ -113,9 +113,7 @@ setAs("IBSpectra","MSnSet",function(from) {
                 featureData=.featureData,
                 processingData=new("MSnProcess",processing=paste("created from IBSpectra object:",date())),
                 annotation="No annotation")
-  
+
   if (validObject(msnset))
     return(msnset)
 })
-
-

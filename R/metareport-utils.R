@@ -28,13 +28,13 @@ create.meta.reports <- function(properties.file="meta-properties.R",
     }
   })
 
-  if (length(proteinInfo(protein.group)) ==0 && !is.null(properties.env$protein.info.f)) 
-    proteinInfo(protein.group) <- 
+  if (length(proteinInfo(protein.group)) ==0 && !is.null(properties.env$protein.info.f))
+    proteinInfo(protein.group) <-
       .create.or.load("protein.info",envir=properties.env,
                       f=properties.env$protein.info.f,
                       x=protein.group,
                       error=warning,default.value=proteinInfo(protein.group))
-  
+
   if (is.null(proteinInfo(protein.group)) || length(proteinInfo(protein.group))==0)
     stop("No protein information available.")
 
@@ -52,7 +52,7 @@ create.meta.reports <- function(properties.file="meta-properties.R",
   merged.table <- .create.or.load.merged.table(properties.env=properties.env)
   merged.table.notlocalized <- .create.or.load.merged.table("merged.table.notlocalized","quant.tbl.notlocalized.rda",properties.env=properties.env)
   ac.vars <- intersect(ac.vars,colnames(merged.table))
-  
+
   tbl.pg <- .create.or.load("tbl.pg",envir=properties.env,f=function()
                             .get.tbl.pg(merged.table,pg.df,merge.cols,ac.vars))
 
@@ -100,7 +100,7 @@ create.meta.reports <- function(properties.file="meta-properties.R",
   write.table(tbl.pg[order(tbl.pg[,'ID'],tbl.pg[,'start.pos']),],file=csvname,
               row.names=FALSE,sep="\t",na="")
   perl.cl <- paste(tab2spreadsheet.cmd,shQuote(xlsxname),shQuote(csvname))
-  
+
   if (include.not.localized) {
     csvname.nl <- paste0(properties.env$name,".not.localized-combined_report.csv")
     write.table(tbl.pg.nl[order(tbl.pg.nl[,'ID'],tbl.pg.nl[,'start.pos']),],file=csvname.nl,row.names=FALSE,sep="\t",na="")
@@ -173,8 +173,8 @@ create.meta.reports <- function(properties.file="meta-properties.R",
     merged.table <- ddply(merged.table,c("class1","class2"),function(x) 
                                  cbind(x,p.value.fdr.adj=p.adjust(x$p.value,"fdr"),
                                          p.value.rat.fdr.adj=p.adjust(x$p.value.rat,"fdr")))
-    merged.table$is.significant <- (merged.table$p.value.fdr.adj < 0.05) & zscore.any2.5 & zscore.all1  
-  
+    merged.table$is.significant <- (merged.table$p.value.fdr.adj < 0.05) & zscore.any2.5 & zscore.all1
+
     merged.table$comp <- paste0(merged.table[[merge.cols[[2]]]],"/",merged.table[[merge.cols[[1]]]])
     merged.table
   })
@@ -199,7 +199,7 @@ create.meta.reports <- function(properties.file="meta-properties.R",
                            load(quant.tbls[idx],envir=env)
                            quant.tbl <- get(ls(envir=env),envir=env)
                            q <- quant.tbl[,intersect(cols,colnames(quant.tbl))]
-                           q <- ddply(q,c("class1","class2"),function(x) 
+                           q <- ddply(q,c("class1","class2"),function(x)
                                  cbind(x,zscore.indiv=round(.calc.zscore(x[,"lratio"]),4)))
                            q[,"lratio"] <- round(q[,"lratio"],4)
                            q[,"variance"] <- round(q[,"variance"],4)
@@ -239,7 +239,7 @@ create.meta.reports <- function(properties.file="meta-properties.R",
   return(merged.table)
 }
 
-.get.names <- function(p,protein.group) 
+.get.names <- function(p,protein.group)
   apply(my.protein.info(protein.group,p)[,c("name","gene_name","protein_name")],2,
         function(s) paste(unique(sort(gsub("'","",s))),collapse=", "))
 
@@ -250,7 +250,7 @@ create.meta.reports <- function(properties.file="meta-properties.R",
     pos <- grep(tag,colnames(tbl.wide),fixed=TRUE)
     idx.r <- intersect(pos,idx.ratio)
     idx.v <- intersect(pos,idx.var)
-  
+
     r<-as.numeric(r)
     c(weighted.mean=round(10^weightedMean(r[idx.r],1/r[idx.v]),2),
       var=round(weightedVariance(r[idx.r],1/r[idx.v]),4),
@@ -290,7 +290,7 @@ create.meta.reports <- function(properties.file="meta-properties.R",
               #labRow=allnames[sel,"gene_name"],
               sepcolor='white', sepwidth=0.025,
               scale="none",cexRow=2,cexCol=2,
-              labCol = colnames(ratio.matrix),                 
+              labCol = colnames(ratio.matrix),
               hclustfun=function(c){hclust(c, method='mcquitty')},
               lmat=rbind( c(0, 3), c(2,1), c(0,4) ), lhei=c(0.25, 4, 0.25 ),breaks=breaks)
   }
@@ -338,7 +338,7 @@ create.meta.reports <- function(properties.file="meta-properties.R",
 #              sepcolor='white', sepwidth=0.025,
               labRow=rownames(ratio.matrix2),
               scale="none",cexRow=1.5,cexCol=1,
-              labCol = colnames(ratio.matrix),                 
+              labCol = colnames(ratio.matrix),
               hclustfun=function(c){hclust(c, method='mcquitty')},
               lmat=rbind( c(0, 3), c(2,1), c(0,4) ), lhei=c(0.25, 4, 0.25 ),breaks=breaks)
   }
@@ -359,8 +359,8 @@ create.meta.reports <- function(properties.file="meta-properties.R",
 .scatter.plot <- function(my.table,name) {
 
   png(sprintf("scatter_plot%s.png",name),width=7,height=7)
-  ggplot(my.table) + 
-     geom_point(aes_string(x="lratio.x",y="lratio.y",color="comp")) + 
+  ggplot(my.table) +
+     geom_point(aes_string(x="lratio.x",y="lratio.y",color="comp")) +
      facet_wrap(~comp)
 
 }
@@ -369,7 +369,7 @@ create.meta.reports <- function(properties.file="meta-properties.R",
   require(RColorBrewer)
   weights <- apply(1/variance.matrix,1,median)
   weights <- weights/sum(weights)
-  
+
   lim <- max(abs(ratio.matrix))
   ##pdf("pairwise_correlation.pdf",title="Pairwise Correlation plot",width=10,height=10)
   png(sprintf("pairwise_correlation_%s.png",name),title="Pairwise Correlation plot",
@@ -401,7 +401,7 @@ create.meta.reports <- function(properties.file="meta-properties.R",
 
 .panel.txt <- function(x,y,labels,cex,font,...) {
   ##abc<-c("1"="rep 1","2"="rep 2");
-  
+
   s <- strsplit(labels,".",fixed=TRUE)[[1]]
   u <- par('usr')
   names(u) <- c("xleft", "xright", "ybottom", "ytop")
@@ -413,4 +413,3 @@ create.meta.reports <- function(properties.file="meta-properties.R",
   text(0.5,0.5, paste(s[[2]],sep=""),cex=cex)
   #text(0.5,0.5, paste(s[[2]],"\n vs ",s[[3]],sep=""),cex=cex)
 }
-

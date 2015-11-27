@@ -108,7 +108,7 @@ setMethod("initialize","NoiseModel",
         if (is.null(reporterTagNames)) reporterTagNames <- reporterTagNames(ibspectra)
         if (!is.character(reporterTagNames))
           stop("reporterTagNames has to be of class character.")
-        
+
         if (is.matrix(reporterTagNames)) {
           # a combination matrix is supplied
           if (nrow(reporterTagNames) != 2)
@@ -119,7 +119,7 @@ setMethod("initialize","NoiseModel",
         }
 
         ri <- reporterIntensities(ibspectra,na.rm=FALSE)
-        
+
         if (plot & !pool)
           par(mfrow=rep(ceiling(sqrt(ncol(reporterTagNames.combn))),2))
 
@@ -127,12 +127,12 @@ setMethod("initialize","NoiseModel",
         # will be averaged in the end
         all.parameters <-
           matrix(nrow=ncol(reporterTagNames.combn),ncol=length(parameter(.Object)))
-        
+
         pool.ch1 <- c()
         pool.ch2 <- c()
 
         if (one.to.one) {
-          
+
           # for each reporter combination, fit a noise function on the ratios
           for (ch_i in seq_len(ncol(reporterTagNames.combn))) {
             ch1 <- ri[,reporterTagNames.combn[1,ch_i]]
@@ -156,14 +156,14 @@ setMethod("initialize","NoiseModel",
 
           # scale the ratios of proteins down to 1, and learn noise model on
           # the differences in their spectra
-          
+
           pg <- proteinGroup(ibspectra)
           pnp <- peptideNProtein(pg)
-          pepnprot <- as.data.frame(pnp[pnp[,'peptide'] %in% 
+          pepnprot <- as.data.frame(pnp[pnp[,'peptide'] %in%
               peptides(pg,protein=reporterProteins(pg),
                        specificity=REPORTERSPECIFIC),],
               stringsAsFactors=FALSE)
-          
+
           pepnspec <-
             as.data.frame(.as.matrix(spectrumToPeptide(pg),
                                      c("spectrum","peptide")),stringsAsFactors=FALSE)
@@ -173,7 +173,7 @@ setMethod("initialize","NoiseModel",
           pgdf <- pgdf[pgdf$spectrum %in%
                        rownames(ri)[apply(ri,1,function(d) !any(is.na(d)))],]
           pgdf$protein.g <- as.character(pgdf$protein.g)
-          
+
           t <- table(pgdf$protein.g)
           sel.proteins <-
             names(t)[t>=min.spectra][order(t[t>=min.spectra],decreasing=TRUE)]
@@ -183,7 +183,7 @@ setMethod("initialize","NoiseModel",
                   length(unique(pgdf$protein.g)),
                   min.spectra,max.n.proteins))
           pgdf <- cbind(pgdf[sel,],ri[pgdf[sel,"spectrum"],])
-          
+
 
           for (ch_i in seq_len(ncol(reporterTagNames.combn))) {
             ch1 <- c()
@@ -191,24 +191,24 @@ setMethod("initialize","NoiseModel",
             pool.ch1 <- c(pool.ch1,ch1)
             pool.ch2 <- c(pool.ch2,ch2)
             # compute protein ratios
-            protein.ratios <- estimateRatio(ibspectra=ibspectra, 
+            protein.ratios <- estimateRatio(ibspectra=ibspectra,
                 channel1=reporterTagNames.combn[1,ch_i],
                 channel2=reporterTagNames.combn[2,ch_i],
                 protein=unique(pgdf$protein.g),combine=F)
-            
+
             # bring protein ratio to ratio 1
             for (protein in rownames(protein.ratios)) {
               if (abs(protein.ratios[protein,"lratio"]) < 1) {
               ch1 <- c(ch1,pgdf[pgdf$protein.g==protein,reporterTagNames.combn[1,ch_i]])
-              ch2 <- c(ch2,pgdf[pgdf$protein.g==protein,reporterTagNames.combn[2,ch_i]] * 
+              ch2 <- c(ch2,pgdf[pgdf$protein.g==protein,reporterTagNames.combn[2,ch_i]] *
                   10^protein.ratios[protein,"lratio"])
               }
             }
-            
+
             if (!pool) {
               all.parameters[ch_i,] <- .fitNoiseFunction(ch1,ch2,
                   noiseFunction(.Object),parameter(.Object),...)
-            
+
              if (plot) {
                 x.data <- log10(sqrt(ch1*ch2))
                 plot(x.data,ch1/ch2,log="y",
@@ -216,7 +216,7 @@ setMethod("initialize","NoiseModel",
                        reporterTagNames.combn[2,ch_i]),ylim=c(0.2,5))
                 .lines.nf(noiseFunction(.Object),parameter=all.parameters[ch_i,],xlim=range(x.data))
               }
-              
+
               print(all.parameters[ch_i,])
             }
             pool.ch1 <- c(pool.ch1,ch1)
@@ -224,7 +224,7 @@ setMethod("initialize","NoiseModel",
           }
         }
         if (!pool) {
-          parameter(.Object) <- .averageParameters(.Object,all.parameters) 
+          parameter(.Object) <- .averageParameters(.Object,all.parameters)
         } else {
           parameter(.Object) <- .fitNoiseFunction(pool.ch1,pool.ch2,noiseFunction(.Object),parameter(.Object),...)
         }
@@ -288,45 +288,45 @@ setGeneric(".fitNoiseFunction",function(data1,data2,f,initial.parameters,...)
 setGeneric(".averageParameters",function(x,parameters)
   standardGeneric(".averageParameters"))
 
-setMethod(".fitNoiseFunction", 
+setMethod(".fitNoiseFunction",
     signature=c(data1="numeric",data2="numeric",f="function",
       initial.parameters="numeric"),
     function(data1,data2,f,initial.parameters,n.bins=30,min.n.bin=50,
         na.rm=is.null(set.na.to),set.na.to=NULL,...) {
 
-      fit.f <- function(param,x,y) 
+      fit.f <- function(param,x,y)
            -sum(dnorm(x,mean=0,sd=f(data=y,parameter=param),log=T))
-      
+
       # remove points which are NA in both channels
       sel <- is.na(data1) & is.na(data2)
       data1 <- data1[!sel]; data2 <- data2[!sel]
-      
+
       if (na.rm) {
         sel <- is.na(data1) | is.na(data2)
         data1 <- data1[!sel]; data2 <- data2[!sel]
       } else {
-        if (is.null(set.na.to)) 
+        if (is.null(set.na.to))
           set.na.to <- quantile(10^abs(log10(data1/data2)),probs=0.99,na.rm=T)
       }
-      
+
       ch1 <- log10(data1)
       ch2 <- log10(data2)
-      
+
       lratio <- ch1 - ch2
-      avg <- 0.5*(ch1 + ch2) 
-      
+      avg <- 0.5*(ch1 + ch2)
+
       if (!is.null(set.na.to)) {
         sel <- is.na(data1);
         lratio[sel] <- log10(set.na.to)
         avg[sel] <- ch2[sel]
-        sel <- is.na(data2); 
+        sel <- is.na(data2);
         lratio[sel] <- -log10(set.na.to)
         avg[sel] <- ch1[sel]
       }
-      
+
       result <- nlminb(initial.parameters,fit.f,
           lower=rep(1e-10,length(initial.parameters)),x=lratio,y=avg,...)
-      
+
       result$par
     }
 )
@@ -393,7 +393,7 @@ setGeneric("lowIntensity<-",function(x,value) standardGeneric("lowIntensity<-"))
 setGeneric("naRegion",function(x) standardGeneric("naRegion"))
 setGeneric("naRegion<-",function(x,value) standardGeneric("naRegion<-"))
 
-## could support switching to fitting of the square-root standard deviation 
+## could support switching to fitting of the square-root standard deviation
 ##  instead of the standard deviations themselves (as done in limma):
 #setMethod("noiseFunction","NoiseModel",function(x) function(...) x@f(...)**2)
 ## as far as it was tested, it had little impact on the fit of the noise model
