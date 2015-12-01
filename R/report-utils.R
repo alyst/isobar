@@ -412,9 +412,13 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
                 normalize.factors=property('normalize.factors',properties.env))
   }
 
-  class.labels <- LETTERS[1:length(reporterTagNames(ibspectra))]
-  if (.exists.property('class.labels',properties.env,null.ok=FALSE))
-    class.labels <- get.property('class.labels')
+  class.labels <- if (.exists.property('class.labels',properties.env,null.ok=FALSE)) {
+    get.property('class.labels')
+  } else if (!is.null(classLabels(ibspectra))) {
+    classLabels(ibspectra)
+  } else {
+    LETTERS[1:length(reporterTagNames(ibspectra))]
+  }
   if (!any(table(class.labels)>1) && property('summarize',properties.env)) {
     stop("When summarize=TRUE, the must be more then one channel per class")
   }
