@@ -127,6 +127,14 @@ noise.model.minspectra=50
 # class.labels=c("Treatment"="T","Treatment"="T","Control"="C","Control"="C")
 class.labels=NULL
 
+## class labels. Must by of type character and of same length as
+## number of channels I. e. 4 for iTRAQ 4plex, 6 for TMT 6plex Example
+## for iTRAQ 4plex:
+## Partition definitions of the isobaric tag channels.
+## Ratios could be calculated for channels of the same partition.
+## By default all channels of the sample belong to the same partition.
+partition.labels=NULL
+
 ## The following parameters define which ratios are calculated.
 
 ## summarize ratios with equal class labels, set to TRUE when replicates are used

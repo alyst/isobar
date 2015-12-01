@@ -427,6 +427,18 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
   }
   classLabels(ibspectra) <- class.labels
 
+  partition.labels <- if (.exists.property('partition.labels',properties.env,null.ok=FALSE)) {
+    get.property('partition.labels')
+  } else if (!is.null(partitionLabels(ibspectra))) {
+    partitionLabels(ibspectra)
+  } else {
+    rep.int('_GLOBAL_', length(reporterTagNames(ibspectra)))
+  }
+  if (!is.character(partition.labels)) {
+    stop("Please provide partition.labels of class character!")
+  }
+  partitionLabels(ibspectra) <- partition.labels
+
   if (!is.null(property('protein.info.f',properties.env)))
     tryCatch({
     proteinInfo(proteinGroup(ibspectra)) <-
@@ -488,8 +500,12 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
     cl <- classLabels(env[["ibspectra"]])
     if (!is.null(property('ratiodistr.class.labels',properties.env)))
       cl <- property('ratiodistr.class.labels',properties.env)
+    ptn <- partitionLabels(env[["ibspectra"]])
+    if (.exists.property('ratiodistr.partition.labels',properties.env) &&
+        !is.null(property('ratiodistr.partition.labels',properties.env)))
+      ptn <- property('ratiodistr.partition.labels',properties.env)
 
-    ratios.for.distr.fitting <- .create.or.load.ratiodistr.ratios(env,properties.env,cl)
+    ratios.for.distr.fitting <- .create.or.load.ratiodistr.ratios(env,properties.env,cl,ptn)
 
     if (all(is.na(ratios.for.distr.fitting$lratio)))
       stop("All ratios for distr fitting are NA - are the correct class labels used?")
@@ -501,6 +517,7 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
     ratiodistr <- .round.distr(ratiodistr,digits=5)
     attr(ratiodistr,"combn.method") <- attr(ratios.for.distr.fitting,"combn.method")
     attr(ratiodistr,"cl") <- attr(ratios.for.distr.fitting,"cl")
+    attr(ratiodistr,"ptn") <- attr(ratios.for.distr.fitting,"ptn")
     attr(ratiodistr,"tagNames") <- reporterTagNames(env[["ibspectra"]])
     ratiodistr
   }))
@@ -513,7 +530,7 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
   distr
 }
 
-.create.or.load.ratiodistr.ratios <- function (env,properties.env,cl) {
+.create.or.load.ratiodistr.ratios <- function (env,properties.env,cl,ptn) {
   .create.or.load("ratios.for.distr.fitting",envir=properties.env,class="data.frame",
                   msg.f="ratios for biological variability distribution fitting",f=function() {
 
@@ -531,10 +548,10 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
 
     if (identical(properties.env[["report.level"]],"peptide"))
       ratios.for.distr.fitting <- peptideRatios(env[["ibspectra"]],noise.model=env[["noise.model"]],do.warn=FALSE,
-                                  cl=cl,combn.method=method,symmetry=isTRUE(properties.env[["ratiodistr.symmetry"]]),summarize=do.summarize)
+                                  cl=cl,ptn=ptn,combn.method=method,symmetry=isTRUE(properties.env[["ratiodistr.symmetry"]]),summarize=do.summarize)
     else
       ratios.for.distr.fitting <- proteinRatios(env[["ibspectra"]],noise.model=env[["noise.model"]],do.warn=FALSE,
-                                      cl=cl,combn.method=method,symmetry=isTRUE(properties.env[["ratiodistr.symmetry"]]),summarize=do.summarize)
+                                      cl=cl,ptn=ptn,combn.method=method,symmetry=isTRUE(properties.env[["ratiodistr.symmetry"]]),summarize=do.summarize)
 
     if (all(is.nan(ratios.for.distr.fitting[["lratio"]])))
       stop("Cannot compute protein ratio distribution - no ratios available.\n",
@@ -542,6 +559,7 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
 
     attr(ratios.for.distr.fitting,"combn.method") <- method
     attr(ratios.for.distr.fitting,"cl") <- cl
+    attr(ratios.for.distr.fitting,"ptn") <- ptn
 
     ratios.for.distr.fitting
   })
@@ -617,6 +635,7 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
 
     set.ratioopts(list(combn.method=property('combn.method',properties.env),
                        cl=classLabels(env[["ibspectra"]]),
+                       ptn=partitionLabels(env[["ibspectra"]]),
                        summarize=property('summarize',properties.env),
                        cmbn=property('cmbn',properties.env),
                        use.na=property('use.na',properties.env),

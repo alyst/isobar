@@ -1,4 +1,6 @@
 CHANGES IN VERSION 1.16.1
+ - added partitionLabels(ibspectra) that allow restricting certain ratio
+   combinations
  - switch from plyr to dplyr
  - use the default perl interpreter (the first found in $PATH) rather than /usr/bin/perl
    for report generation

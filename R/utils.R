@@ -289,18 +289,19 @@ number.ranges <- function(numbers) {
     }
 }
 
-.channel_info <- function(tags,cl=NULL) {
+.channel_info <- function(tags,cl=NULL,ptn=NULL) {
   data.frame(r = tags,
              class = as.character(cl),
+             partition = if (!is.null(ptn)) as.character(ptn) else '_GLOBAL_',
              stringsAsFactors = FALSE) %>%
   # Filter NA channels
-  dplyr::filter(!is.na(r) & !is.na(class)) %>%
-  dplyr::group_by(class) %>%
+  dplyr::filter(!is.na(r) & !is.na(class) & !is.na(partition)) %>%
+  dplyr::group_by(partition, class) %>%
   mutate(n_class_channels = n()) %>% # get the number of intra-class channels (within the same partition)
   ungroup()
 }
 
-.get.cmbn <- function(combn,tags,cl) {
+.get.cmbn <- function(combn,tags,cl,ptn=NULL) {
   if (!all(unlist(combn) %in% cl))
     stop("incorrect combn specification")
 
@@ -312,7 +313,7 @@ number.ranges <- function(numbers) {
   chn_info <- .channel_info(tags,cl,ptn)
 
   merge(chn_info, chn_info,
-        by=c(), suffixes=c("1", "2")) %>%
+        by="partition", suffixes=c("1", "2")) %>%
     dplyr::select(r1, r2, class1, class2) %>%
     dplyr::semi_join(combn_df)
 }

@@ -502,6 +502,34 @@ setReplaceMethod("classLabels","IBSpectra",
     }
 )
 
+setGeneric("partitionLabels", function(x) standardGeneric("partitionLabels"))
+setGeneric("partitionLabels<-", function(x,value) standardGeneric("partitionLabels<-"))
+
+setMethod("partitionLabels",signature(x="IBSpectra"),
+    function(x) {
+      partition.labels <- phenoData(x)[["partition.labels"]]
+      names(partition.labels) <- phenoData(x)[["partition.label.description"]]
+      return(partition.labels)
+    }
+)
+setReplaceMethod("partitionLabels","IBSpectra",
+    function(x,value) {
+
+      if (length(value) != length(reporterTagNames(x)))
+        stop("Partition labels [",length(value),"] need to habe the same length as reporterTagNames [",length(reporterTagNames(x)),"]")
+
+      if (is.null(names(value))) {
+        phenoData(x)[["partition.labels",labelDescription="partition labels"]] <- value
+      } else {
+        phenoData(x)[["partition.labels",labelDescription="partition labels"]] <- as.character(value)
+        phenoData(x)[["partition.label.description",labelDescription="partition label descriptions"]] <- names(value)
+      }
+
+      validObject(x)
+
+      x
+    }
+)
 
 ### - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### correctIsotopeImpurities, normalize,
@@ -590,8 +618,19 @@ normalize <- function(x,f=median,target="intensity",
   if (!is.null(exclude.protein) & !is.null(use.protein))
     stop("Provide either exclude.protein or use.protein, not both.")
 
-  if (is.null(channels) && length(classLabels(x)) > 0)
-    channels <- reporterTagNames(x)[!is.na(classLabels(x))]
+  if (is.null(channels) && length(classLabels(x)) > 0) {
+    # define normalization channels
+    chn_info <- .channel_info(reporterTagNames(x),
+                              cl = classLabels(x),
+                              ptn = partitionLabels(x))
+                 dplyr::group_by(partition)
+    if (n_groups(chn_info) > 1) {
+      # normalize within each partition
+      channels <- lapply(attr(chn_info, "indices"), function(ixs) chn_info$r[ixs+1])
+    } else {
+      channels <- chn_info$r
+    }
+  }
 
   if (!is.null(channels) ) {
     if (is.list(channels)) {

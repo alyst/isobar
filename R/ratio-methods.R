@@ -1020,7 +1020,7 @@ getMultUnifDensity <- function(x,n=NULL){
 ##     for estimation of biological variability
 ##  - method "versus.class": all combinations against class vs
 ##  - method "versus.channel": all combinations against channel vs
-combn.matrix <- function(x,method="global",cl=NULL,vs=NULL) {
+combn.matrix <- function(x,method="global",cl=NULL,vs=NULL,ptn=NULL) {
   if (method != "global" & is.null(cl))
     stop("No class labels cl provided.")
   if (method != "global" & !is.character(cl)) {
@@ -1034,12 +1034,12 @@ combn.matrix <- function(x,method="global",cl=NULL,vs=NULL) {
   if (!is.null(vs) && !is.character(vs))
     vs <- as.character(vs)
 
-  chn_info <- .channel_info(x, cl)
+  chn_info <- .channel_info(x, cl, ptn)
   if (nrow(chn_info) == 0)
     stop("No valid channels, make sure channel tags and classes are properly specified")
 
   # cross join within the partition
-  chnXchn <- merge(chn_info, chn_info, by=c(), suffixes=c("1", "2")) %>%
+  chnXchn <- merge(chn_info, chn_info, by="partition", suffixes=c("1", "2")) %>%
     dplyr::select(r1, r2, class1, class2)
 
   # Create a combn matrix with all combinations of channels to consider
@@ -1209,7 +1209,7 @@ ratiosReshapeWide <- function(quant.tbl,vs.class=NULL,sep=".",cmbn=NULL,short.na
 proteinRatios <-
   function(ibspectra, noise.model, reporterTagNames=NULL,
            proteins=reporterProteins(proteinGroup(ibspectra)),peptide=NULL,
-           cl=classLabels(ibspectra),
+           cl=classLabels(ibspectra), ptn=partitionLabels(ibspectra),
            combn.method="global",combn.vs=NULL,
 	   symmetry=FALSE,
            summarize=FALSE,summarize.method="mult.pval",
@@ -1230,11 +1230,11 @@ proteinRatios <-
   if (is.null(cl) && is.null(cmbn)) stop("please supply class labels as argument cl or a cmbn matrix")
 
   if (is.null(cmbn))
-    cmbn <- combn.matrix(reporterTagNames,combn.method,cl=cl,vs=combn.vs)
+    cmbn <- combn.matrix(reporterTagNames,combn.method,cl=cl,ptn=ptn,vs=combn.vs)
 
   if (nrow(cmbn) < 1)
     stop("No possible combination for reporters [",paste(reporterTagNames,sep=","),"]",
-         " w/ classes [",paste(cl,sep=","),"]",
+         " w/ classes [",paste(cl,sep=","),"], partitions [",paste(ptn,sep=","),"]",
          " and combn.method ",combn.method," possible.",
          " summarize=",ifelse(summarize,"TRUE","FALSE"))
 
