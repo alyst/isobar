@@ -85,7 +85,7 @@ write.xls.report <- function(properties.env,report.env,file="isobar-analysis.xls
 
     xls.quant.tbl <- get.val('xls.quant.tbl')
     if (identical(properties.env[["report.level"]],"protein")) {
-      xls.quant.tbl <- xls.quant.tbl[order(xls.quant.tbl[,"group"]),]
+      xls.quant.tbl <- xls.quant.tbl[order(xls.quant.tbl$group),]
       ## Create links
     } else {
       ## Create links
@@ -93,7 +93,7 @@ write.xls.report <- function(properties.env,report.env,file="isobar-analysis.xls
       if ("site.probs" %in% colnames(protein.id.df)) {
         protein.id.df[["site.probs"]] <- .convertPhosphoRSPepProb(protein.id.df[["peptide"]],protein.id.df[["site.probs"]])
       }
-      protein.id.df[["peptide"]] <- .convertPeptideModif(protein.id.df[,"peptide"],protein.id.df[,"modif"])
+      protein.id.df[["peptide"]] <- .convertPeptideModif(protein.id.df$peptide, protein.id.df$modif)
       q.links <- sapply(protein.id.df[["peptide"]],function(p) {
                           res=which(xls.quant.tbl[["Sequence"]]==p)[1]
                             if (is.na(res)) ""
@@ -114,7 +114,7 @@ write.xls.report <- function(properties.env,report.env,file="isobar-analysis.xls
     }
 
     if ('notes' %in% colnames(protein.id.df))
-      protein.id.df[,'notes'] <- gsub("[\t\n]"," ",protein.id.df[,'notes'])
+      protein.id.df$notes <- gsub("[\t\n]"," ",protein.id.df$notes)
     write.t(xls.quant.tbl,file=protein.quant.f)
     write.t(protein.id.df,file=protein.id.f)
     write.t(ii,file=analysis.properties.f,col.names=FALSE)
@@ -199,9 +199,9 @@ write.xls.report <- function(properties.env,report.env,file="isobar-analysis.xls
 
     #order.c <- if(isTRUE(properties.env[["xls.report.format"]]=="long"),"Channels",NULL)
     if (identical(properties.env[["report.level"]],"protein"))
-      tbl <- tbl[order(tbl[,"group"]),]
+      tbl <- tbl[order(tbl$group),]
     else if (all(c("ID","Sequence") %in% colnames(tbl)))
-      tbl <- tbl[order(tbl[,"ID"],tbl[,"Sequence"]),]
+      tbl <- tbl[order(tbl$ID, tbl$Sequence),]
 
     tbl
 
@@ -261,7 +261,7 @@ write.xls.report <- function(properties.env,report.env,file="isobar-analysis.xls
     if ("zscore" %in% properties.env[["xls.report.columns"]]) {
       ## TODO: zscore is calculated across all classes -
       ##       it is probably more appropriate to calculate it individual for each class
-      #input.tbl[,'zscore'] <- .calc.zscore(input.tbl[,'lratio'])
+      #input.tbl$zscore <- .calc.zscore(input.tbl$lratio)
     }
     round.digits <- 4;
 
@@ -335,7 +335,7 @@ write.xls.report <- function(properties.env,report.env,file="isobar-analysis.xls
   if ("PHOS" %in% ptm) my.ptm="Phosphorylation"
   if ("METH" %in% ptm) my.ptm="Methylation"
 
-  input.tbl[,'ac']  <- NULL
+  input.tbl$ac  <- NULL
   pnp <- ddply(pnp,'peptide',function(x) c(peptide=x[1,'peptide'],ac=paste(x[,'protein.g'],collapse=";")))
 
   input.tbl <- merge(pnp,input.tbl,by="peptide")
@@ -351,7 +351,7 @@ write.xls.report <- function(properties.env,report.env,file="isobar-analysis.xls
 
   tbl <- merge(pg.df,input.tbl[,intersect(c("peptide","pep.siteprobs","modif","i","Spectra"),colnames(input.tbl))],
                by=c("peptide","modif"),all.y=TRUE)
-  tbl[["peptide"]] <- .convertPeptideModif(tbl[,"peptide"],tbl[,"modif"])
+  tbl[["peptide"]] <- .convertPeptideModif(tbl$peptide, tbl$modif)
   colnames(tbl)[colnames(tbl)=="peptide"] <- "Sequence"
 
   colnames(tbl)[colnames(tbl)=="proteins"] <- "ACs"
@@ -379,18 +379,18 @@ write.xls.report <- function(properties.env,report.env,file="isobar-analysis.xls
   message(".",appendLF=FALSE)
   input.tbl[["i"]]  <- seq_len(nrow(input.tbl))
 
-  tbl.meta <- data.frame(i=input.tbl[["i"]], group=input.tbl[,"group"],protein.g=input.tbl[,'ac'],
+  tbl.meta <- data.frame(i=input.tbl[["i"]], group=input.tbl$group, protein.g=input.tbl$ac,
                          stringsAsFactors=FALSE)
 
   # protein information
-  protein.gs <- unique(input.tbl[,"ac"])
+  protein.gs <- unique(input.tbl$ac)
   tbl <- data.frame(protein.g=protein.gs,
                     AC=.protein.acc(protein.gs,protein.group),
                     stringsAsFactors=FALSE)
 
   message(".",appendLF=FALSE)
   indist.proteins <- .vector.as.data.frame(indistinguishableProteins(protein.group),colnames=c("protein","protein.g"))
-  indist.proteins <- indist.proteins[indist.proteins[,'protein.g'] %in% protein.gs,]
+  indist.proteins <- indist.proteins[indist.proteins$protein.g %in% protein.gs,]
   if (.proteinInfo.ok(protein.group)) {
     protein.info.tbl <- proteinInfo(protein.group,protein.g=protein.gs,select=c("name","protein_name","gene_name"))
     colnames(protein.info.tbl) <- c("ID","Description","Gene")
@@ -402,7 +402,7 @@ write.xls.report <- function(properties.env,report.env,file="isobar-analysis.xls
   pnp <- as.data.frame(peptideNProtein(protein.group),stringsAsFactors=FALSE)
   ps <- peptideSpecificity(protein.group)
   protein.to.peptides <- merge(pnp[pnp[,'protein.g'] %in% protein.gs,],
-                               ps[ps[,'specificity'] %in% specificity,],
+                               ps[ps$specificity %in% specificity,],
                                by="peptide")
   protein.to.spectra <- merge(protein.to.peptides,
                               .vector.as.data.frame(protein.group@spectrumToPeptide,colnames=c("spectrum","peptide")),
@@ -410,27 +410,27 @@ write.xls.report <- function(properties.env,report.env,file="isobar-analysis.xls
 
   tbl <- cbind(tbl, n=sapply(protein.gs,function(p) {sum(indist.proteins == p)}),
                     "@comment=Number of specific peptides@Peptide Count" =
-                       table(protein.to.peptides[,'protein.g'])[protein.gs],
+                       table(protein.to.peptides$protein.g)[protein.gs],
                     "@comment=Number of specific spectra@Spectral Count" =
-                       table(protein.to.spectra[,'protein.g'])[protein.gs])
+                       table(protein.to.spectra$protein.g)[protein.gs])
 
   message(".",appendLF=FALSE)
   # sequence coverage
   if (.proteinInfo.ok(protein.group) && "sequence" %in% colnames(proteinInfo(protein.group))) {
     peptide.info <- unique(peptideInfo(protein.group)[,c("protein","peptide","start.pos")])
-    peptide.info[,'end.pos'] <- peptide.info[,'start.pos'] + nchar(peptide.info[,'peptide']) - 1
-    peptide.info <- peptide.info[peptide.info[,'protein'] %in% indist.proteins[,'protein'],]
+    peptide.info$end.pos <- peptide.info$start.pos + nchar(peptide.info$peptide) - 1
+    peptide.info <- peptide.info[peptide.info$protein %in% indist.proteins$protein,]
     protein.lengths <- nchar(unlist(setNames(proteinInfo(protein.group,protein.g=protein.gs,select=c("sequence"),simplify=FALSE),NULL)))
 
     if (!proteinInfoIsOnSpliceVariants(proteinInfo(protein.group))) {
       splice.df <- protein.group@isoformToGeneProduct
-      splice.df <- splice.df[splice.df[,'proteinac.w.splicevariant'] %in% indist.proteins[,'protein'] &
-                             splice.df[,'proteinac.wo.splicevariant'] %in% names(protein.lengths),]
+      splice.df <- splice.df[splice.df$proteinac.w.splicevariant %in% indist.proteins$protein &
+                             splice.df$proteinac.wo.splicevariant %in% names(protein.lengths),]
 
       # only keep first AC
       splice.df.1 <- ddply(splice.df,'proteinac.wo.splicevariant',function(x) x[1,])
       peptide.info <- merge(peptide.info,splice.df.1,by.x='protein',by.y='proteinac.w.splicevariant')
-      peptide.info[,'protein'] <- peptide.info[,'proteinac.wo.splicevariant']
+      peptide.info$protein <- peptide.info$proteinac.wo.splicevariant
     }
 
     seq.covs <- ddply(peptide.info,"protein",function(x) {
@@ -445,11 +445,11 @@ write.xls.report <- function(properties.env,report.env,file="isobar-analysis.xls
 
     if (!proteinInfoIsOnSpliceVariants(proteinInfo(protein.group))) {
       seq.covs <- merge(seq.covs,splice.df,by.x='protein',by.y='proteinac.wo.splicevariant')
-      seq.covs[,'protein'] <- seq.covs[,'proteinac.w.splicevariant']
+      seq.covs$protein <- seq.covs$proteinac.w.splicevariant
     }
 
     proteing.seq.covs <- merge(indist.proteins,seq.covs,by='protein')
-    seq.covs <- tapply(proteing.seq.covs[,'seq.cov'],factor(proteing.seq.covs[,'protein.g']),mean)
+    seq.covs <- tapply(proteing.seq.covs$seq.cov, factor(proteing.seq.covs$protein.g),mean)
 
     tbl <- cbind(tbl, "@comment=Coverage of the protein sequence with observed peptides@Sequence Coverage" =
                         round(seq.covs[protein.gs],digits=4))

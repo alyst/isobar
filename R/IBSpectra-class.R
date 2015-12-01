@@ -215,7 +215,7 @@ setAs("IBSpectra","data.frame",
         res$peptide <- res$real.peptide
 
       # return in order
-      res[order(res[,.PROTEIN.COLS['PROTEINAC']],res[,.PEPTIDE.COLS['STARTPOS']],res[,.SPECTRUM.COLS['PEPTIDE']]),
+      res[order(res[[.PROTEIN.COLS['PROTEINAC']]],res[[.PEPTIDE.COLS['STARTPOS']]],res[[.SPECTRUM.COLS['PEPTIDE']]]),
           c(intersect(c(.PROTEIN.COLS,.PEPTIDE.COLS,.SPECTRUM.COLS),colnames(res)),
             colnames(rm),colnames(ri))]
     }
@@ -239,7 +239,7 @@ ibSpectra.as.concise.data.frame  <- function(from) {
       res <- unique(merge(pg.df,fdata.df,by=.SPECTRUM.COLS['PEPTIDE'],all=TRUE,sort=FALSE))
 
       # return in order
-      res[order(res[,.PROTEIN.COLS['PROTEINAC_CONCISE']],res[,.SPECTRUM.COLS['PEPTIDE']]),
+      res[order(res[[.PROTEIN.COLS['PROTEINAC_CONCISE']]],res[[.SPECTRUM.COLS['PEPTIDE']]]),
           c(intersect(c(.PROTEIN.COLS,.PEPTIDE.COLS,"n.groups","n.acs","n.variants",.SPECTRUM.COLS),colnames(res)),
             colnames(rm),colnames(ri))]
     }
@@ -271,9 +271,9 @@ ibSpectra.as.concise.data.frame  <- function(from) {
   }
   res.nice <- cbind(res.nice,
                     Modification=res$modif,
-                    AC=.protein.acc(res[,"accession"],proteinGroup(from)),
-                    ID=proteinInfo(protein.group,res[,"accession"],do.warn=FALSE),
-                    n=sapply(res[,"accession"],function(p) {length(names(indist.proteins)[indist.proteins == p])}))
+                    AC=.protein.acc(res$accession,proteinGroup(from)),
+                    ID=proteinInfo(protein.group,res$accession,do.warn=FALSE),
+                    n=sapply(res$accession,function(p) {length(names(indist.proteins)[indist.proteins == p])}))
   res <- res[,!.grep_columns(res,c("peptide","modif","accession"))]
   # return in order
   res.nice <- cbind(res.nice,res[,c(intersect(.SPECTRUM.COLS,colnames(res)),
@@ -418,10 +418,10 @@ setMethod("spectrumSel",signature(x="IBSpectra",peptide="matrix",protein="missin
           sel <- sel & fData(x)[[p.i]] %in% peptide[,p.i]
 
         if (use.for.quant.only && .SPECTRUM.COLS['USEFORQUANT'] %in% colnames(fData(x)))
-          sel <- sel & fData(x)[,.SPECTRUM.COLS['USEFORQUANT']]
+          sel <- sel & fData(x)[[.SPECTRUM.COLS['USEFORQUANT']]]
 
         for (m in modif)
-          sel <- sel & grepl(m,fData(x)[,.SPECTRUM.COLS['MODIFSTRING']])
+          sel <- sel & grepl(m,fData(x)[[.SPECTRUM.COLS['MODIFSTRING']]])
 
         if (!any(sel) && do.warn) warning("No spectra for peptide ",paste(peptide,collapse="; modif = "))
         if (spectrum.titles)
@@ -437,12 +437,12 @@ setMethod("spectrumSel",signature(x="IBSpectra",peptide="character",protein="mis
           warning("0L peptide provided")
           return(FALSE)
         }
-        sel <- fData(x)[,.SPECTRUM.COLS['PEPTIDE']]  %in% peptide
+        sel <- fData(x)[[.SPECTRUM.COLS['PEPTIDE']]]  %in% peptide
         for (m in modif)
-          sel <- sel & grepl(m,fData(x)[,.SPECTRUM.COLS['MODIFSTRING']])
+          sel <- sel & grepl(m,fData(x)[[.SPECTRUM.COLS['MODIFSTRING']]])
 
         if (use.for.quant.only && .SPECTRUM.COLS['USEFORQUANT'] %in% colnames(fData(x)))
-          sel <- sel & fData(x)[,.SPECTRUM.COLS['USEFORQUANT']] 
+          sel <- sel & fData(x)[[.SPECTRUM.COLS['USEFORQUANT']]]
         if (!any(sel) && do.warn) warning("No spectra for peptide ",peptide)
          if (spectrum.titles)
           return(rownames(fData(x))[sel])
@@ -578,7 +578,7 @@ normalize <- function(x,f=median,target="intensity",
     if (!.SPECTRUM.COLS['FILE'] %in% colnames(fData(x))) {
       warning("No 'file' column is specified in IBSpectra, setting normalize per.file to FALSE")
       per.file <- FALSE
-    } else if (length(unique(fData(x))[,.SPECTRUM.COLS['FILE']])==1) {
+    } else if (length(unique(fData(x))[[.SPECTRUM.COLS['FILE']]])==1) {
       warning("Only one file - setting normalize per.file to FALSE.")
       per.file <- FALSE
     }
@@ -629,8 +629,8 @@ normalize <- function(x,f=median,target="intensity",
 
   if (per.file && .SPECTRUM.COLS['FILE'] %in% colnames(fData(x))) {
     fd <- fData(x)
-    for (n.file in sort(unique(fd[,.SPECTRUM.COLS['FILE']]))) {
-      sel <- sel.na & fd[,.SPECTRUM.COLS['FILE']] == n.file
+    for (n.file in sort(unique(fd[[.SPECTRUM.COLS['FILE']]]))) {
+      sel <- sel.na & fd[[.SPECTRUM.COLS['FILE']]] == n.file
       message("\tnormalizing ",n.file," [",sum(sel)," spectra]")
       ri.sel <- ri[sel,,drop=FALSE]
       normalize.factors <- .get.normalization.factors(ri.sel,f,target,f.doapply,...)
@@ -777,8 +777,8 @@ subsetIBSpectra <-
 
   pg.df <- as.data.frame(proteinGroup(x))
   # remove peptides and proteins from proteinGroup
-  proteinGroup(x) <- ProteinGroup(pg.df[pg.df[,"spectrum"] %in%
-                                        fData(x)[sel.spectra,"spectrum"],] )
+  proteinGroup(x) <- ProteinGroup(pg.df[pg.df$spectrum %in%
+                                        fData(x)$spectrum[sel.spectra],] )
 
 
   # remove from featureData

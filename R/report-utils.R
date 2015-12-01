@@ -178,7 +178,8 @@ initialize.env <- function(env,properties.env) {
   if ("site.probs" %in% colnames(fData(env[["ibspectra"]]))
       && ! "pep.siteprobs" %in% colnames(fData(env[["ibspectra"]])))
     fData(env[["ibspectra"]])$pep.siteprobs <-
-      .convertPhosphoRSPepProb(fData(env[["ibspectra"]])[,'peptide'],fData(env[["ibspectra"]])[,'site.probs'],
+      .convertPhosphoRSPepProb(fData(env[["ibspectra"]])$peptide,
+                               fData(env[["ibspectra"]])$site.probs,
                                round.to.frac=20)
 
 
@@ -192,7 +193,7 @@ initialize.env <- function(env,properties.env) {
   }
   env[["quant.tbl"]] <- .create.or.load.quant.table(env,properties.env)
   if (!"ac" %in% colnames(env[["quant.tbl"]]) && "protein" %in% colnames(env[["quant.tbl"]]))
-    env[["quant.tbl"]][,'ac'] <- env[["quant.tbl"]]$protein
+    env[["quant.tbl"]]$ac <- env[["quant.tbl"]]$protein
 
   ## required for TeX
   if (property('write.report',properties.env) && identical(properties.env[["report.level"]],"protein"))
@@ -435,7 +436,8 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
   if ("site.probs" %in% colnames(fData(ibspectra))
       && ! "pep.siteprobs" %in% colnames(fData(ibspectra)))
      fData(ibspectra)$pep.siteprobs <-
-        .convertPhosphoRSPepProb(fData(ibspectra)[,'peptide'],fData(ibspectra)[,'site.probs'],
+        .convertPhosphoRSPepProb(fData(ibspectra)$peptide,
+                                 fData(ibspectra)$site.probs,
                                  round.to.frac=20)
 
   return(ibspectra)
@@ -485,13 +487,13 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
 
     ratios.for.distr.fitting <- .create.or.load.ratiodistr.ratios(env,properties.env,cl)
 
-    if (all(is.na(ratios.for.distr.fitting[,'lratio'])))
+    if (all(is.na(ratios.for.distr.fitting$lratio)))
       stop("All ratios for distr fitting are NA - are the correct class labels used?")
 
     if (!is.function(property('ratiodistr.fitting.f',properties.env)))
       stop("ratiodistr.fitting.f must be set to a function [e.g. fitCauchy or fitTd]")
 
-    ratiodistr <- property('ratiodistr.fitting.f',properties.env)(ratios.for.distr.fitting[,'lratio'])
+    ratiodistr <- property('ratiodistr.fitting.f',properties.env)(ratios.for.distr.fitting$lratio)
     ratiodistr <- .round.distr(ratiodistr,digits=5)
     attr(ratiodistr,"combn.method") <- attr(ratios.for.distr.fitting,"combn.method")
     attr(ratiodistr,"cl") <- attr(ratios.for.distr.fitting,"cl")
@@ -634,7 +636,7 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
 
     quant.tbl <- do.call("proteinRatios",ratios.opts)
 
-    quant.tbl[,"sd"] <- sqrt(quant.tbl[,"variance"])
+    quant.tbl$sd <- sqrt(quant.tbl$variance)
 
 #    quant.tbl$sign.string <- "not significant"
 #    quant.tbl$sign.string[quant.tbl$is.significant] <- "is significant"
@@ -650,7 +652,7 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
 #    }
 
     if (identical(properties.env[["report.level"]],"protein")) {
-      quant.tbl[,"gene_names"] <- sapply(quant.tbl[,"ac"], function(x) {
+      quant.tbl$gene_names <- sapply(quant.tbl$ac, function(x) {
         if (length(protein.info) == 0) return("")
         allreporter <- indistinguishableProteins(protein.group,protein.g=x)
         acs <- unique(isoforms[allreporter,"proteinac.wo.splicevariant"])
@@ -659,11 +661,11 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
       })
       sort.genenames <- quant.tbl[,"gene_names"]
       sort.genenames[sort.genenames==""] <- quant.tbl[sort.genenames=="","ac"]
-      quant.tbl <- quant.tbl[order(sort.genenames,quant.tbl[,"r1"],quant.tbl[,"r2"]),]
-      quant.tbl[,"group"] <- as.numeric(factor(quant.tbl[,"ac"],levels=unique(quant.tbl[,"ac"])))
+      quant.tbl <- quant.tbl[order(sort.genenames,quant.tbl$r1, quant.tbl$r2),]
+      quant.tbl$group <- as.numeric(factor(quant.tbl$ac,levels=unique(quant.tbl$ac)))
     }
 
-    if (all(is.na(quant.tbl[["lratio"]])))
+    if (all(is.na(quant.tbl$lratio)))
       stop("All ratios are NA")
 
     return(quant.tbl)
@@ -674,7 +676,7 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
   .create.or.load("my.protein.infos",envir=properties.env,
                   f=function() {
 
-    protein.groupnames <-unique(env[["quant.tbl"]][,"ac"])
+    protein.groupnames <-unique(env[["quant.tbl"]]$ac)
     ## if (is.null(protein.info)) { stop("protein info is null!")}
     my.protein.infos <- llply(protein.groupnames, .do.create.protein.info, protein.group=proteinGroup(env[["ibspectra"]]),
                               .parallel=isTRUE(getOption('isobar.parallel')))
@@ -698,8 +700,8 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
                               specificity=REPORTERSPECIFIC,do.warn=FALSE)
       n.spectra <- length(names(spectrumToPeptide(protein.group))[spectrumToPeptide(protein.group)%in%peptides])
 
-      tbl.protein.name <- sort(collapsed.gene_name[,'protein_name'])[1];
-      if (length(unique(collapsed.gene_name[,'protein_name'])) > 1)
+      tbl.protein.name <- sort(collapsed.gene_name$protein_name)[1]
+      if (length(unique(collapsed.gene_name$protein_name)) > 1)
         tbl.protein.name <- paste(tbl.protein.name,", ...",sep="")
 
       list(n.reporter = nrow(reporter.protein.info),
@@ -709,14 +711,14 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
            n.spectra=n.spectra,
            collapsed.gene_name = collapsed.gene_name,
            table.name = ifelse(
-             length(collapsed.gene_name[,'ac_link'])>3,
-             paste(paste(collapsed.gene_name[1:3,'ac_link'],collapse=", "),
+             length(collapsed.gene_name$ac_link)>3,
+             paste(paste(collapsed.gene_name$ac_link[1:3],collapse=", "),
                    ", \\dots",sep=""),
-             paste(collapsed.gene_name[,'ac_link'],collapse=", ")),
-           section.name = sanitize(paste(unique(collapsed.gene_name[,'name_nolink']),
+             paste(collapsed.gene_name$ac_link,collapse=", ")),
+           section.name = sanitize(paste(unique(collapsed.gene_name$name_nolink),
              collapse=", ")),
            table.protein.name = tbl.protein.name,
-           gene.name = paste(sort(unique(reporter.protein.info[,'gene_name'])),collapse=", ")
+           gene.name = paste(sort(unique(reporter.protein.info$gene_name)),collapse=", ")
            )
     }
 

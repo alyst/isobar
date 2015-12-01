@@ -76,8 +76,8 @@ if(!isGeneric("as.data.frame")) setGeneric("as.data.frame", useAsDefault=as.data
 #TODO: unify factor.as.character and factor.to.chr
 .factor.as.character <- function(df) {
   for (col_i in seq_len(ncol(df))) {
-    if (is.factor(df[,col_i]))
-      df[,col_i] <- as.character(df[,col_i])
+    if (is.factor(df[[col_i]]))
+      df[,col_i] <- as.character(df[[col_i]])
   }
   df
 }
@@ -99,7 +99,7 @@ if(!isGeneric("as.data.frame")) setGeneric("as.data.frame", useAsDefault=as.data
 
 .factor.to.chr <- function(df) {
   for (col in colnames(df))
-    if (is.factor(df[,col])) df[,col] <- as.character(df[,col])
+    if (is.factor(df[[col]])) df[,col] <- as.character(df[[col]])
   df
 }
 
@@ -156,9 +156,9 @@ number.ranges <- function(numbers) {
 }
 
 .all.duplicate.rows <- function(df,column,n=2) {
-  t <- table(df[,column])
-  res <- df[df[,column] %in% names(t)[t>=n],]
-  res[order(res[,column]),]
+  t <- table(df[[column]])
+  res <- df[df[[column]] %in% names(t)[t>=n],]
+  res[order(res[[column]]),]
 }
 
 .vector.as.data.frame <- function(vect,colnames=NULL,stringsAsFactors=FALSE) {
@@ -341,12 +341,12 @@ number.ranges <- function(numbers) {
    if (.PEPTIDE.COLS['REALPEPTIDE'] %in% colnames(from))
      return(from)
 
-   from[,.PEPTIDE.COLS['REALPEPTIDE']] <- from[,.SPECTRUM.COLS['PEPTIDE']]
-   l.peptide <- gsub("I","L",from[,.SPECTRUM.COLS['PEPTIDE']])
+   from[,.PEPTIDE.COLS['REALPEPTIDE']] <- from[[.SPECTRUM.COLS['PEPTIDE']]]
+   l.peptide <- gsub("I","L",from[[.SPECTRUM.COLS['PEPTIDE']]])
    if (sub.il) {
      from$peptide <- l.peptide
    } else {
-     from$peptide <- as.vector( tapply(from[,.SPECTRUM.COLS['PEPTIDE']],l.peptide,function(x) {
+     from$peptide <- as.vector( tapply(from[[.SPECTRUM.COLS['PEPTIDE']]],l.peptide,function(x) {
            if (all(x == x[1])) x[1]
            else
               .concensus.il.peptide(unique(x))

@@ -13,6 +13,7 @@ load.tex.properties <- function(env) {
     initialize.env(env,env$properties.env)
   }
   assign("get.property",get.property,envir=env)
+  invisible()
 }
 
 write.tex.commands <- function() {
@@ -217,7 +218,7 @@ draw.protein.group <- function(protein.group,reporter.protein.g) {
     cat(paste("accession","","gene name","protein name",sep=" & "))
   }
   cat(" & \\multirow{",length(unique(protein.ac(protein.group,
-                                                pgt[pgt$reporter.protein==reporter.protein.g,"protein.g"])))+1,
+                                                pgt$protein.g[pgt$reporter.protein==reporter.protein.g])))+1,
       "}{*}{%\n",sep="")
   tikz.proteingroup(protein.group,reporter.protein.g,show.pos)
   cat("} \\\\ \n")
@@ -439,7 +440,7 @@ print_sign_proteins_tbl <- function(file,cmbn,protein.group,quant.tbl,my.protein
       }
       prot_i <- 1
 
-      proteins <- quant.tbl[sel,"ac"][order(quant.tbl[sel,"lratio"])]
+      proteins <- quant.tbl$ac[sel][order(quant.tbl$lratio[sel])]
       for (protein in proteins) {
         prot.info <- my.protein.infos[[protein]]
         protein.row <- quant.tbl[quant.tbl[["ac"]]==protein & sel,,drop=FALSE]
@@ -450,7 +451,7 @@ print_sign_proteins_tbl <- function(file,cmbn,protein.group,quant.tbl,my.protein
         gene.names <- .tex.combinenames(protein.names,is.single.comparision,cmbn)
 
         mycat(" ",sprintf("\\hyperref[protein.%s]{%s}",
-                          protein.row[,"group"],prot_i),
+                          protein.row$group,prot_i),
               " & ",paste0(prot.info[["table.name"]],": ",
                            paste(gene.names,collapse=", ")),
               " & ",print_groupsize(prot.info[["n.reporter"]],prot.info[["n.groupmember"]]),
@@ -514,18 +515,17 @@ print_protein_quant_tbl <- function(file="",
   print_longtablehdr("protein",is.single.comparision,TRUE,file=file)
 
   proteins.n.group <- unique(quant.tbl[,c('ac','group')])
-  proteins <- proteins.n.group[order(proteins.n.group[["group"]]),"ac"]
 
-  for (protein in proteins) {
+  for (protein in proteins.n.group$ac) {
     protein.rows <- quant.tbl[quant.tbl[["ac"]]==protein,,drop=FALSE]
     protein.rows <- protein.rows[order(protein.rows[["r1"]],protein.rows[["r2"]]),,drop=FALSE]
-    protein.groupnumber <- protein.rows[1,"group"]
+    protein.groupnumber <- protein.rows$group[1]
     prot.info <- my.protein.infos[[protein]]
 
     reporter.peptides <- peptides(protein.group,protein=protein)
     spectra <- names(spectrumToPeptide(protein.group))[spectrumToPeptide(protein.group)%in%reporter.peptides]
 
-    if (all(is.na(protein.rows[,'lratio']))) {
+    if (all(is.na(protein.rows$lratio))) {
       next
     }
 
@@ -544,23 +544,23 @@ print_protein_quant_tbl <- function(file="",
     for (i in seq_len(ncol(cmbn))) {
       if (i > 1) { mycat(paste(rep("&",4),collapse=" ")) }
       if (!is.single.comparision) {
-          mycat(" & ",protein.rows[i,'r1'])
-          mycat(" & ",protein.rows[i,'r2'])
+          mycat(" & ",protein.rows$r1[i])
+          mycat(" & ",protein.rows$r2[i])
       }
-      mycat(" & ",ifelse(is.na(protein.rows[i,'n.spectra']) |
-                    protein.rows[i,'n.spectra']==0,"",protein.rows[i,'n.spectra']))
-      if (is.na(protein.rows[i,"lratio"])) {
+      mycat(" & ",ifelse(is.na(protein.rows$n.spectra[i]) |
+                    protein.rows$n.spectra[i]==0,"",protein.rows$n.spectra[i]))
+      if (is.na(protein.rows$lratio[i])) {
         mycat (" & & & ")
       } else {
-        mycat(" & ",sprintf("\\textbf{%.2f}",10^protein.rows[i,"lratio"]))
-        mycat(" & ",ifelse(protein.rows[i,"is.significant"] == 1,"*",""))
-        mycat(" & ",draw.boxplot(protein.rows[i,'lratio'],
-                               protein.rows[i,'sd'],bnd))
+        mycat(" & ",sprintf("\\textbf{%.2f}",10^protein.rows$lratio[i]))
+        mycat(" & ",ifelse(protein.rows$is.significant[i] == 1,"*",""))
+        mycat(" & ",draw.boxplot(protein.rows$lratio[i],
+                               protein.rows$sd[i],bnd))
       }
       mycat(" \\\\")
       if (i < ncol(cmbn)) mycat("*\n")
     }
-    if (protein != proteins[length(proteins)] && ncol(cmbn) > 1) {
+    if (protein != proteins.n.group$ac[nrow(proteins.n.group)] && ncol(cmbn) > 1) {
         mycat(" \\midrule[0.02em] \n\n");
     }
   }
@@ -603,7 +603,7 @@ print_protein_notquant_tbl <- function(file="",
     cat(...,file=file,append=append,sep=sep)
 
 
-  tt <- table(quant.tbl[is.na(quant.tbl[["lratio"]]),"ac"])
+  tt <- table(quant.tbl$ac[is.na(quant.tbl[["lratio"]])])
   proteins.notquantified <- names(tt)[tt==ncol(cmbn)]
   mycat("\\begin{longtable}{rXrrr}",
   "  \\#",
@@ -616,7 +616,7 @@ print_protein_notquant_tbl <- function(file="",
   for (protein in proteins.notquantified) {
     protein.rows <- quant.tbl[quant.tbl[["ac"]]==protein,,drop=FALSE]
     protein.rows <- protein.rows[order(protein.rows[["r1"]],protein.rows[["r2"]]),,drop=FALSE]
-    protein.groupnumber <- protein.rows[1,"group"]
+    protein.groupnumber <- protein.rows$group[1]
     prot.info <- my.protein.infos[[protein]]
 
     reporter.peptides <- peptides(protein.group,protein=protein)
