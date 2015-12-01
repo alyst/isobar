@@ -613,7 +613,7 @@ getPtmInfoFromPhosphoSitePlus <- function(protein.group,file.name=NULL,modif="PH
     file.name <- mapping[modif]
   }
 
-  sites <- read.delim(file.name,
+  sites <- read.delim(file.name, fileEncoding="latin1",
                       sep="\t",header=TRUE,skip=3,stringsAsFactors=FALSE)
   ac.column <- ifelse("ACC_ID" %in% colnames(sites),"ACC_ID","ACC.")
   species.column <- intersect(c("ORG", "ORGANISM", "SPECIES"), colnames(sites))
@@ -633,22 +633,23 @@ getPtmInfoFromPhosphoSitePlus <- function(protein.group,file.name=NULL,modif="PH
 
   lit_colnames = c(PUBMED_LTP="n.publ ltp", PUBMED_MS2="n.publ htp",
 		   LS_LIT="n.publ ltp", MS_LIT="n.publ htp")
-  for (coln in names(lit_colnames)) {
-    sites[!is.na(sites[[coln]]), coln] <- paste0(lit_colnames[[coln]],": ",sites[!is.na(sites[[coln]]), coln])
+  for (coln in intersect(names(lit_colnames), colnames(sites))) {
+    col_mask <- !is.na(sites[[coln]])
+    if (any(col_mask)) {
+      sites[col_mask, coln] <- paste0(lit_colnames[[coln]],": ",sites[[coln]][col_mask])
+    }
   }
 
   data.frame(.id=sites[[ac.column]],
-             isoform_ac=sapply(sites[,ac.column],function(ac) ifelse(grepl("-[0-9]$",ac),ac,paste0(ac,"-1"))),
-             species=tolower(sites[,species.column]),
-             modification.name=tolower(sites[,'MOD_TYPE']),
-             description=apply(sites,1,function(x) {
-                               y <- tolower(x['MOD_TYPE'])
-                               if (nchar(x[domain.column]) > 0)
-                                 y <- paste0(y," (domain ",x[domain.column],")")
-                               y
-                             }),
-             evidence=apply(sites[,intersect(colnames(sites),names(lit_colnames))],1,
-                            function(x) { x<-x[!is.na(x)]; paste(x,collapse=";")}),
+             isoform_ac=ifelse(grepl("-[0-9]$",sites[[ac.column]]),
+                               sites[[ac.column]], paste0(sites[[ac.column]],"-1")),
+             species=tolower(sites[[species.column]]),
+             modification.name=tolower(sites$MOD_TYPE),
+             description=paste0(tolower(sites$MOD_TYPE),
+                                ifelse(nchar(sites[[domain.column]])>0,
+                                       paste0(" (domain ", sites[[domain.column]], ")"), "")),
+             evidence=apply(as.matrix(sites[,intersect(colnames(sites),names(lit_colnames))]),1,
+                            function(x) paste(x[!is.na(x)],collapse=";")),
              position=as.integer(substr(sites[[residue.column]],2,nchar(sites[[residue.column]]))),
              stringsAsFactors=FALSE)
 }
