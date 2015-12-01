@@ -71,7 +71,6 @@
   assayDataElements$ions <- data.ions
   assayDataElements$mass <- data.mass
 
-
   if (!identical(spectra.ids,rownames(data.ions))) {
     id.n.quant <- intersect(spectra.ids,rownames(data.mass))
     id.not.quant <- setdiff(spectra.ids,rownames(data.mass))
@@ -248,16 +247,14 @@
   merge(pept.n.prot,identifications,by="peptide")
 }
 
-setMethod("initialize","IBSpectra",
-    function(.Object,identifications=NULL,data.ions=NULL,data.mass=NULL,
-             proteinGroupTemplate=NULL,fragment.precision=NULL,
-             assayDataElements=list(),allow.missing.columns=FALSE,
-             write.excluded.to=NULL,...) {
-
-  if (is.null(identifications))
-    return(callNextMethod(.Object,...))
-
-  reporterTagNames <- reporterTagNames(.Object)
+# prepares the fields of the IBSpectra object
+.preinitialize.IBSpectra <- function(type,
+    identifications=NULL,data.ions=NULL,data.mass=NULL,
+    proteinGroupTemplate=NULL,fragment.precision=NULL,
+    assayDataElements=list(),allow.missing.columns=FALSE,
+    write.excluded.to=NULL,...)
+{
+  tmpl <- new(type) # empty template of IBSpectra subclass
   identifications <- .factor.to.chr(identifications)
 
   ## Check that obligatory columns are present
@@ -289,25 +286,22 @@ setMethod("initialize","IBSpectra",
   }
   identifications <- .remove.duplications(identifications)
 
-  # Create ProteinGroup
-  proteinGroup <- ProteinGroup(merge(pept.n.prot,identifications,by="peptide"),template=proteinGroupTemplate)
-
   ## Get intensities and masses in assayDataElements
   if (is.null(data.ions))
-    data.ions <- .get.quant(identifications,.PEAKS.COLS['IONSFIELD'],reporterTagNames)
+    data.ions <- .get.quant(identifications,.PEAKS.COLS['IONSFIELD'],reporterTagNames(tmpl))
   if (is.null(data.mass))
-    data.mass <- .get.quant(identifications,.PEAKS.COLS['MASSFIELD'],reporterTagNames)
+    data.mass <- .get.quant(identifications,.PEAKS.COLS['MASSFIELD'],reporterTagNames(tmpl))
 
   if (!all(rownames(data.ions)==rownames(data.mass),na.rm=TRUE))
     stop(sum(rownames(data.ions)==rownames(data.mass))," rownames are not equal between ions and mass")
   if (any(is.na(rownames(data.ions))))
     stop(sum(is.na(rownames(data.ions)))," rownames in data.ions are NA")
   if (any(is.na(rownames(data.mass))))
-    stop(sum(is.na(rownames(data.ions)))," rownames in data.ions are NA")
+    stop(sum(is.na(rownames(data.mass)))," rownames in data.mass are NA")
 
   assayDataElements <- .get.quant.elems(assayDataElements,data.ions,data.mass,
                                         identifications[[SC['SPECTRUM']]],fragment.precision,
-                                        reporterTagMasses(.Object))
+                                        reporterTagMasses(tmpl))
 
   if (!.SPECTRUM.COLS['USEFORQUANT'] %in% colnames(identifications)) {
     # not perfect - better: set spectra of peptides shared between groups to FALSE
@@ -317,18 +311,13 @@ setMethod("initialize","IBSpectra",
 
   fdata <- as.data.frame(identifications[,colnames(identifications) %in% .SPECTRUM.COLS])
   rownames(fdata) <- fdata[['spectrum']]
-  featureData <- new("AnnotatedDataFrame",data=fdata,
-                     varMetadata=.get.varMetaData(fdata))
-
-  assayData=do.call(assayDataNew, assayDataElements, envir=parent.frame())
 
   ## create ibspectra object
-  callNextMethod(.Object,
-      assayData=assayData,
-      featureData=featureData,
-      proteinGroup=proteinGroup,
-      reporterTagNames=reporterTagNames,...)
-})
+  list(assayData=do.call(assayDataNew, assayDataElements, envir=parent.frame()),
+       featureData=new("AnnotatedDataFrame",data=fdata,
+                          varMetadata=.get.varMetaData(fdata)),
+       proteinGroup=ProteinGroup(merge(pept.n.prot,identifications,by="peptide"),template=proteinGroupTemplate))
+}
 
 
 
@@ -339,15 +328,26 @@ setMethod("readIBSpectra",
           signature(type="character",id.file="character",peaklist.file="missing"),
     function(type,id.file,identifications.format=NULL,
              sep="\t",decode.titles=FALSE,trim.titles=FALSE,...) {
-      new(type,
-          identifications=.read.idfile(id.file,sep=sep,
-                                       identifications.format=identifications.format,
-                                       decode.titles=decode.titles,trim.titles=trim.titles),...)
+        preinit = .preinitialize.IBSpectra(type,identifications=.read.idfile(id.file,sep=sep,
+                        identifications.format=identifications.format,
+                        decode.titles=decode.titles,trim.titles=trim.titles),...)
+        new(type,
+            assayData=preinit$assayData,
+            featureData=preinit$featureData,
+            proteinGroup=preinit$proteinGroup,
+            ...)
     }
 )
 setMethod("readIBSpectra",
           signature(type="character",id.file="data.frame",peaklist.file="missing"),
-    function(type,id.file,...) new(type,identifications=id.file,...)
+    function(type,id.file,...) {
+        preinit = .preinitialize.IBSpectra(type,identifications=id.file,...)
+        new(type,
+            assayData=preinit$assayData,
+            featureData=preinit$featureData,
+            proteinGroup=preinit$proteinGroup,
+            ...)
+    }
 )
 
 setMethod("readIBSpectra",
@@ -401,13 +401,19 @@ setMethod("readIBSpectra",
         id.file <- annotate.spectra.f(id.file,peaklist.file)
       }
 
-      .Object <- new(type)
+      tmpl <- new(type)
       quant <- .read.peaklist(peaklist.file,peaklist.format,
-                              .Object@reporterTagMasses,.Object@reporterTagNames,
+                              reporterTagMasses(tmpl), reporterTagNames(tmpl),
                               scan.lines,fragment.precision,fragment.outlier.prob,
                               id.data=id.file)
-
-      new(type,identifications=id.file,quant[[2]],data.ions=quant[[1]],...)
+      preinit = .preinitialize.IBSpectra(type,identifications=id.file,
+                                         data.mass=quant$data.mass,
+                                         data.ions=quant$data.ions, ...)
+      new(type,
+          assayData=preinit$assayData,
+          featureData=preinit$featureData,
+          proteinGroup=preinit$proteinGroup,
+          ...)
     }
 )
 
@@ -495,7 +501,7 @@ setMethod("readIBSpectra",
   if (any(is.na(rownames(data.mass))))
     stop(sum(is.na(rownames(data.ions)))," rownames in data.ions are NA")
 
-  return(list(data.ions,data.mass))
+  return(list(data.ions=data.ions, data.mass=data.mass))
 }
 
 
