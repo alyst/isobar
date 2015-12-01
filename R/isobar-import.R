@@ -466,18 +466,21 @@ setMethod("readIBSpectra",
   }
 
   if (!is.null(id.data) && .SPECTRUM.COLS['SPECTRUM.QUANT'] %in% colnames(id.data)) {
+    message("matching quantitations to identifications ... ", appendLF=FALSE)
     data.titles.orig <- data.titles
     data.titles <- .do.map(data.titles,unique(id.data[,.SPECTRUM.COLS[c('SPECTRUM','SPECTRUM.QUANT')]]))
     sel.na <- is.na(data.titles)
-    if (any(is.na(data.titles))) {
-      message(" for ",sum(sel.na)," of ",length(data.titles)," spectra,",
+    if (any(sel.na)) {
+      n_na <- sum(sel.na)
+      message(" for ",n_na," of ",length(data.titles)," spectra,",
               " quantitative information is available,\n",
               "   but no peptide-spectrum match. Spectrum titles: \n\t",
-              paste(data.titles.orig[sel.na][1:2],collapse=",\n\t"),", ...")
+              paste(data.titles.orig[which(sel.na)[1:min(2,n_na)]],collapse=",\n\t"),", ...")
       data.ions <- data.ions[!sel.na,]
       data.mass <- data.mass[!sel.na,]
       data.titles <- data.titles[!sel.na]
     }
+    message("done")
   }
 
   rownames(data.ions)  <- data.titles
