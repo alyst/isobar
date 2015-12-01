@@ -584,11 +584,11 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
       if (!"use.for.quant" %in% colnames(fData(env[["ibspectra"]])))
         fData(env[["ibspectra"]])[["use.for.quant"]] <- TRUE
       if (type=='confident-sites')
-        pep.n.modif <- unique(apply(fData(env[["ibspectra"]])[fData(env[["ibspectra"]])[["use.for.quant"]],
-                                    c("peptide","modif")],2,cbind))
+        pep.n.modif <- unique(fData(env[["ibspectra"]])[fData(env[["ibspectra"]])[["use.for.quant"]],
+                              c("peptide","modif")])
       else {
-        pep.n.modif <- unique(apply(fData(env[["ibspectra"]])[!fData(env[["ibspectra"]])[["use.for.quant"]],
-                                    c("peptide","modif","pep.siteprobs")],2,cbind))
+        pep.n.modif <- unique(fData(env[["ibspectra"]])[!fData(env[["ibspectra"]])[["use.for.quant"]],
+                              c("peptide","modif","pep.siteprobs")])
         set.ratioopts(list(use.for.quant.only=FALSE))
       }
 
@@ -689,7 +689,7 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
 .do.create.protein.info <- function(x,protein.group) {
     protein.group.table <- proteinGroupTable(protein.group)
       allgroupmember <- indistinguishableProteins(protein.group, protein.g =
-                                                  protein.group.table[protein.group.table[,'reporter.protein'] %in% x,"protein.g"])
+                                                  protein.group.table$protein.g[protein.group.table$reporter.protein %in% x])
 
       reporter.protein.info <- my.protein.info(protein.group,x)
       collapsed.gene_name <- human.protein.names(reporter.protein.info)

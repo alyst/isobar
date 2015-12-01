@@ -10,7 +10,7 @@ setClass("ProteinGroup",
                    spectrumToPeptide = "character",
                    spectrumId = "data.frame",
                    peptideSpecificity = "data.frame",
-                   peptideNProtein = "matrix",
+                   peptideNProtein = "data.frame",
                    indistinguishableProteins = "character",
                    proteinGroupTable = "data.frame",
                    overlappingProteins = "matrix",
@@ -30,14 +30,14 @@ setClass("ProteinGroup",
 ###
 
 .valid.ProteinGroup.slots <- function(object) {
-  peptides <- unique(object@peptideNProtein[,"peptide"])
-  proteins <- unique(object@peptideNProtein[,"protein.g"])
+  peptides <- unique(object@peptideNProtein$peptide)
+  proteins <- unique(object@peptideNProtein$protein.g)
   msg <- NULL
 
 # TODO: check this if
-#  if (!setequal(peptides,peptideSpecificity[,'peptide']) ||
-#      !setequal(proteins,indistinguishableProteins[,'protein.g']) ||
-#      !setequal(peptides,spectrumToPeptide[,'peptide']))
+#  if (!setequal(peptides,peptideSpecificity$peptide) ||
+#      !setequal(proteins,indistinguishableProteins$protein.g) ||
+#      !setequal(peptides,spectrumToPeptide$peptide))
 #    msg <- "slots are not of equal length"
   return(msg)
 }
@@ -87,11 +87,11 @@ setMethod("ProteinGroup",signature(from="data.frame",template="ProteinGroup",pro
       if (!.PEPTIDE.COLS['REALPEPTIDE'] %in% colnames(from))
         from <- .fix.il.peptide(from)
 
-      peptideNProtein <- peptideNProtein(template)[peptideNProtein(template)[,"peptide"] %in% from[,'peptide'],]
+      peptideNProtein <- peptideNProtein(template)[peptideNProtein(template)$peptide %in% from$peptide,]
 
-      protein.group.table <- proteinGroupTable(template)[proteinGroupTable(template)$protein.g %in% peptideNProtein[,"protein.g"],]
+      protein.group.table <- proteinGroupTable(template)[proteinGroupTable(template)$protein.g %in% peptideNProtein$protein.g,]
       ipt <- indistinguishableProteins(template)
-      indistinguishableProteins <- ipt[ipt %in% peptideNProtein[,"protein.g"]]
+      indistinguishableProteins <- ipt[ipt %in% peptideNProtein$protein.g]
 
       peptideSpecificity <-
         peptideSpecificity(template)[peptideSpecificity(template)[["peptide"]] %in% from$peptide,]
@@ -117,7 +117,7 @@ setMethod("ProteinGroup",signature(from="data.frame",template="ProteinGroup",pro
       return(
           new("ProteinGroup",
               peptideNProtein = peptideNProtein,
-              peptideSpecificity = peptideSpecificity,
+              peptideSpecificity = as.data.frame(peptideSpecificity),
               proteinGroupTable = protein.group.table,
               indistinguishableProteins = indistinguishableProteins,
               spectrumId = spectrumId,
@@ -293,16 +293,16 @@ setMethod("ProteinGroup",signature(from="data.frame",template="missing",proteinI
         pgt[["protein.group.table"]]$protein.g == pgt[["protein.group.table"]]$reporter.protein
 
       # define peptide specificity - pep.n.prots.toconsider are ignored here for now
-      tmp <- merge(as.data.frame(pgt[["protein.group.table"]],stringsAsFactors=FALSE),
-                   pep.n.prots,by.x="protein.g",by.y="protein.g")
+      tmp <- merge(as.data.frame(pgt[["protein.group.table"]], stringsAsFactors=FALSE),
+                   pep.n.prots, by.x="protein.g",by.y="protein.g")
 
       peptideSpecificity <- .factor.as.character(ddply(tmp,"peptide",function(d) {
         data.frame(specificity=
-                   ifelse(length(unique(d[,"protein.g"]))==1,REPORTERSPECIFIC,
-                          ifelse(length(unique(d[,"reporter.protein"]))==1,GROUPSPECIFIC,
+                   ifelse(length(unique(d$protein.g))==1,REPORTERSPECIFIC,
+                          ifelse(length(unique(d$reporter.protein))==1,GROUPSPECIFIC,
                                  UNSPECIFIC)),
-                   n.shared.proteins=length(unique(d[,"protein.g"])),
-                   n.shared.groups=length(unique(d[,"reporter.protein"])),
+                   n.shared.proteins=length(unique(d$protein.g)),
+                   n.shared.groups=length(unique(d$reporter.protein)),
                    stringsAsFactors=FALSE)
       }
       ))
@@ -312,7 +312,8 @@ setMethod("ProteinGroup",signature(from="data.frame",template="missing",proteinI
       isoforms <- data.frame(database = .get.database(proteins),
                              proteinac.w.splicevariant = proteins,
                              proteinac.wo.splicevariant = proteins,
-                             splicevariant = NA,stringsAsFactors=FALSE)
+                             splicevariant = NA,
+                             stringsAsFactors=FALSE)
 
       sel.uniprot <- isoforms$database == .UNIPROTDATABASE
       pos.isoforms <- sel.uniprot & grepl("^[^-]*\\-[0-9]*$",proteins)
@@ -325,8 +326,8 @@ setMethod("ProteinGroup",signature(from="data.frame",template="missing",proteinI
 
       return(
           new("ProteinGroup",
-              peptideNProtein = as.matrix(pep.n.prots),
-              peptideSpecificity = peptideSpecificity,
+              peptideNProtein = as.data.frame(pep.n.prots, stringsAsFactors=FALSE),
+              peptideSpecificity = as.data.frame(peptideSpecificity, stringsAsFactors=FALSE),
               proteinGroupTable = pgt[["protein.group.table"]],
               indistinguishableProteins =
                 .as.vect(prots.to.prot,col.data='protein.g',col.names='protein'),
@@ -708,7 +709,7 @@ setAs("ProteinGroup","data.frame",function(from) {
 
   ## merge spectrum to peptide to indistinguishable proteins (protein.g)
   spectrum.to.proteing <-
-    merge(sp.df, as.data.frame(peptideNProtein(from),stringsAsFactors=FALSE))
+    merge(sp.df, peptideNProtein(from))
 
   ## merge with indist. proteins
   spectrum.to.protein <- merge(ip.df,spectrum.to.proteing)
@@ -731,7 +732,7 @@ proteinGroup.as.concise.data.frame <-
                                        colnames=c("protein","protein.g"))
         ip.df <- merge(ip.df,from@isoformToGeneProduct,
                        by.x="protein",by.y="proteinac.w.splicevariant")
-        pep.n.prot <- as.data.frame(peptideNProtein(from),stringsAsFactors=FALSE)
+        pep.n.prot <- peptideNProtein(from)
         in.df <- unique(ddply(ip.df, "protein.g",
                         function(x)
                           c(n.acs=length(unique(x[,"proteinac.wo.splicevariant"])),
@@ -763,8 +764,7 @@ proteinGroup.as.concise.data.frame <-
            human.protein.acs=TRUE,show.startpos=TRUE,modif.pos=NULL,
            ptm.info=NULL,link.url="http://www.uniprot.org/uniprot/") {
 
-        pep.n.prot <- merge(as.data.frame(peptideNProtein(from),stringsAsFactors=FALSE),
-                            from@peptideInfo)
+        pep.n.prot <- merge(peptideNProtein(from), from@peptideInfo)
         p.ac <- .protein.acc(reporterProteins(from),from)
         ip.df <- .vector.as.data.frame(indistinguishableProteins(from),
                                        colnames=c("protein","protein.g"))
@@ -800,8 +800,7 @@ proteinGroup.as.concise.data.frame <-
            report.only.modified=FALSE) {
         i = 0
 
-        pep.n.prot <- merge(as.data.frame(peptideNProtein(from),stringsAsFactors=FALSE),
-                            from@peptideInfo,by="peptide")
+        pep.n.prot <- merge(peptideNProtein(from), from@peptideInfo,by="peptide")
         if (!is.null(modif.pos) && isTRUE(report.only.modified))
           pep.n.prot <- pep.n.prot[grepl(modif.pos,pep.n.prot$modif),]
 
@@ -836,7 +835,7 @@ proteinGroup.as.concise.data.frame <-
 
         cols <- c("proteinn","link","start.pos","real.peptide","modif","modif.pos","modif.comment")
         if (show.proteinInfo)
-          pnd <- proteinNameAndDescription(from,ip.df[,'protein.g'])
+          pnd <- proteinNameAndDescription(from,ip.df$protein.g)
 
 
         my.res <-
@@ -1230,7 +1229,7 @@ setReplaceMethod("proteinInfo","ProteinGroup",
 setGeneric("reporter.protein",function(x,protein.g) standardGeneric("reporter.protein"))
 setMethod("reporter.protein",signature("ProteinGroup","character"),
           function(x,protein.g) {
-            proteinGroupTable(x)[proteinGroupTable(x)[,'protein.g']==protein.g, 'reporter.protein']
+            proteinGroupTable(x)$reporter.protein[proteinGroupTable(x)$protein.g==protein.g]
           })
 
 setGeneric("protein.g",function(x,pattern,variables=c("AC","name"),...) standardGeneric("protein.g"))
@@ -1302,8 +1301,8 @@ get.pep.group <- function(x,protein) {
 
   protein.group <- protein.group.table[protein.group.table$reporter.protein==protein,]
   pepnprots <- peptideNProtein(x)
-  pp <- as.data.frame(pepnprots[pepnprots[,'protein.g'] %in%
-                                protein.group$protein.g,,drop=FALSE],stringsAsFactors=FALSE)
+  pp <- pepnprots[pepnprots$protein.g %in%
+                  protein.group$protein.g,,drop=FALSE]
 
   # get all peptides of protein
   peptides <- unique(pp$peptide)
@@ -1330,8 +1329,8 @@ get.pep.group <- function(x,protein) {
   pg <- proteinGroup(ibspectra)
   protein.group <- proteinGroupTable(pg)
   pnp <- peptideNProtein(pg)
-  t <- table(pnp[,"peptide"])
-  pnp <- pnp[pnp[,"peptide"] %in% names(t)[t==2],]
+  t <- table(pnp$peptide)
+  pnp <- pnp[pnp$peptide %in% names(t)[t==2],]
 
   protein.group$lratio <- NA
   protein.group$var    <- NA
@@ -1346,7 +1345,7 @@ get.pep.group <- function(x,protein) {
     } else {
       ## reporter.ratio set above - protein.group is sequential
       ## subset protein: get peptide shared with (and only with) reporter
-      shared.peptides <- pnp[pnp[,"protein.g"]==protein.group[i,"protein.g"],"peptide"]
+      shared.peptides <- pnp$peptide[pnp$protein.g==protein.group$protein.g[i]]
       if (length(shared.peptides)>0) {
         shared.ratio <- calc.ratio(ibspectra,peptide=shared.peptides)
         protein.group[i,c("lratio","var")] <- shared.ratio[c("lratio","variance")]
@@ -1475,9 +1474,11 @@ my.protein.info <- function(x,protein.g) {
 }
 
 summary.ProteinGroup <- function(object,only.reporters=TRUE,...) {
-  peptide.cnt <- table(peptideNProtein(object)[,"protein.g"])
+  peptide.cnt <- table(peptideNProtein(object)$protein.g)
   peptide.spectra.cnt <- table(spectrumToPeptide(object))
-  spectra.cnt <- tapply(peptideNProtein(object)[,"peptide"],peptideNProtein(object)[,"protein.g"],function(pep) sum(peptide.spectra.cnt[pep]))
+  spectra.cnt <- tapply(peptideNProtein(object)$peptide,
+                        peptideNProtein(object)$protein.g,
+                        function(pep) sum(peptide.spectra.cnt[pep]))
 
   if (only.reporters)
     proteins <- reporterProteins(object)
@@ -1707,11 +1708,11 @@ calculate.dNSAF <- function(protein.group,use.mw=FALSE,normalize=TRUE,combine.f=
 
   ## Calculate distribution factors for each shared peptide
   pnp <- peptideNProtein(protein.group)
-  pnp <- pnp[pnp[,"protein.g"] %in% reporterProteins(protein.group),]
-  t <- table(pnp[,"peptide"])
+  pnp <- pnp[pnp$protein.g %in% reporterProteins(protein.group),]
+  t <- table(pnp$peptide)
   shared.peptides <- names(t)[t>1]
   distr.factors <- lapply(shared.peptides,function(pep) {
-    proteins <- pnp[pnp[,"peptide"]==pep,"protein.g"]
+    proteins <- pnp$protein.g[pnp$peptide==pep]
     uspc.p <- uspc[proteins]
     uspc.p/sum(uspc.p)
   })
@@ -1795,10 +1796,12 @@ calculate.emPAI <- function(protein.group,protein.g=reporterProteins(protein.gro
   names(sequences) <- proteinInfo(protein.group)$accession
 
   n.observed.peptides <- switch(observed.pep[1],
-                                pep = table(peptideNProtein(protein.group)[,"protein.g"])[protein.g],
+                                pep = table(peptideNProtein(protein.group)$protein.g)[protein.g],
                                 mod.charge.pep = {
-                                  pep.cnt <- table(unique(protein.group@spectrumId[,c("peptide","modif","charge")])[,"peptide"])
-                                  tapply(peptideNProtein(protein.group)[,"peptide"],peptideNProtein(protein.group)[,"protein.g"],function(x) sum(pep.cnt[x]))[protein.g]
+                                  pep.cnt <- table(unique(protein.group@spectrumId[,c("peptide","modif","charge")])$peptide)
+                                  tapply(peptideNProtein(protein.group)$peptide,
+                                         peptideNProtein(protein.group)$protein.g,
+                                         function(x) sum(pep.cnt[x]))[protein.g]
                                 })
   if(proteinInfoIsOnSpliceVariants(proteinInfo(protein.group)))
     get.to.acs <- function(my.protein.g) names(ip)[ip==my.protein.g]

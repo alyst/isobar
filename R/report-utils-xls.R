@@ -222,7 +222,7 @@ write.xls.report <- function(properties.env,report.env,file="isobar-analysis.xls
     if (!"ac" %in% colnames(input.tbl)) {
       pnp <- subset(proteinGroup(env[["ibspectra"]])@peptideNProtein,
                     protein.g %in% reporterProteins(proteinGroup(env[["ibspectra"]])))
-      pnp <- unlist(tapply(pnp[,"protein.g"],pnp[,"peptide"],paste,collapse=";",simplify=FALSE))
+      pnp <- unlist(tapply(pnp$protein.g, pnp$peptide, paste,collapse=";",simplify=FALSE))
       input.tbl[["ac"]] <- pnp[input.tbl[["peptide"]]]
     }
     if (is.data.frame(compare.to.quant))
@@ -401,7 +401,7 @@ write.xls.report <- function(properties.env,report.env,file="isobar-analysis.xls
   # spectra and peptide counts
   pnp <- as.data.frame(peptideNProtein(protein.group),stringsAsFactors=FALSE)
   ps <- peptideSpecificity(protein.group)
-  protein.to.peptides <- merge(pnp[pnp[,'protein.g'] %in% protein.gs,],
+  protein.to.peptides <- merge(pnp[pnp$protein.g %in% protein.gs,],
                                ps[ps$specificity %in% specificity,],
                                by="peptide")
   protein.to.spectra <- merge(protein.to.peptides,
