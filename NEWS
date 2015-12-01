@@ -1,4 +1,7 @@
 CHANGES IN VERSION 1.16.1
+ - added the ability to combine IBSpectra objects and run analysis
+   on the combined dataset, while avoiding using ratios of channels from
+   different samples
  - added partitionLabels(ibspectra) that allow restricting certain ratio
    combinations
  - switch from plyr to dplyr

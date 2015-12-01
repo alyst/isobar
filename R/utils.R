@@ -379,3 +379,23 @@ number.ranges <- function(numbers) {
     cl = getOption("isobar.cluster", NULL)
     if (!is.null(cl)) parLapply(cl=cl, ...) else lapply(...)
 }
+
+.combined_tag_info <- function(ibspectras) {
+  all_tags <- rbind_all(lapply(names(ibspectras), function(spectra_id) {
+    ibspectra <- ibspectras[[spectra_id]]
+    ptns <- partitionLabels(ibspectra)
+    if (is.null(ptns)) ptns <- "_GLOBAL_"
+    data.frame(orig_tag_name = reporterTagNames(ibspectra),
+               tag_mass = reporterTagMasses(ibspectra),
+               ibspectra_id = spectra_id,
+               class = classLabels(ibspectra),
+               orig_partition = ptns,
+               stringsAsFactors = FALSE)
+  })) %>% mutate(tag_name = paste0(ibspectra_id,"_",orig_tag_name),
+                 partition = ifelse(orig_partition=="_GLOBAL_",
+                                    ibspectra_id, paste0(ibspectra_id,"_",orig_partition)),
+                 orig_ions_col = paste0("X",orig_tag_name,"_ions"),
+                 ions_col = paste0(tag_name,"_ions"),
+                 orig_mass_col = paste0("X",orig_tag_name,"_mass"),
+                 mass_col = paste0(tag_name,"_mass"))
+}

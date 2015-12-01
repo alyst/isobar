@@ -432,12 +432,13 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
   } else if (!is.null(partitionLabels(ibspectra))) {
     partitionLabels(ibspectra)
   } else {
-    rep.int('_GLOBAL_', length(reporterTagNames(ibspectra)))
+    NULL
   }
-  if (!is.character(partition.labels)) {
-    stop("Please provide partition.labels of class character!")
+  if (!is.null(partition.labels)) {
+    if (!is.character(partition.labels))
+      stop("Please provide partition.labels of class character!")
+    partitionLabels(ibspectra) <- partition.labels
   }
-  partitionLabels(ibspectra) <- partition.labels
 
   if (!is.null(property('protein.info.f',properties.env)))
     tryCatch({

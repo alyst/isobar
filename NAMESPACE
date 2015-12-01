@@ -3,6 +3,7 @@ import("methods")
 importClassesFrom(Biobase, AnnotatedDataFrame, AssayData, eSet,
                   Versioned, VersionedBiobase, Versions)
 
+import("Matrix")
 import("distr")
 import("dplyr")
 

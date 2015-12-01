@@ -1837,3 +1837,61 @@ calculate.emPAI <- function(protein.group,protein.g=reporterProteins(protein.gro
                             })
   return (as.character(paste0(res$splicevar, collapse=", ")))
 }
+
+combineProteinGroups <- function(protGroups, all_tags) {
+      message("Combining ProteinGroups ... ",appendLF=FALSE)
+
+      join_named_vecs <- function(vecs) {
+        df <- data.frame(n = unlist(lapply(vecs, names)),
+                     v = unlist(lapply(vecs, as.character)),
+                     stringsAsFactors = FALSE) %>% distinct()
+        res <- df$v
+        names(res) <- df$n
+        return(res)
+      }
+      peptideNProtein <- rbind_all(lapply(protGroups, peptideNProtein)) %>% dplyr::distinct()
+      protein.group.table <- rbind_all(lapply(protGroups, proteinGroupTable)) %>% dplyr::distinct()
+      peptideSpecificity <- rbind_all(lapply(protGroups, peptideSpecificity)) %>% dplyr::distinct()
+      proteinInfo <- rbind_all(lapply(protGroups, proteinInfo)) %>% dplyr::distinct()
+      attr(proteinInfo,"on.splice.variant") <- all(sapply(protGroups, function(pg) {
+          !is.null(attr(proteinInfo(pg),"on.splice.variant")) &&
+          attr(proteinInfo(pg),"on.splice.variant")}))
+      peptideInfo <- rbind_all(lapply(protGroups, peptideInfo)) %>% dplyr::distinct()
+      isoforms <- rbind_all(lapply(protGroups, function(pg) pg@isoformToGeneProduct)) %>% distinct()
+      indistinguishableProteins <- join_named_vecs(lapply(protGroups, indistinguishableProteins))
+      spectrumToPeptide <- join_named_vecs(lapply(protGroups, spectrumToPeptide))
+
+      common_tag_cols <- c(all_tags$ions_col, all_tags$mass_col)
+      common_spec_cols <- grep("_(ions|mass)$", colnames(protGroups[[1]]@spectrumId),
+                               value=TRUE, invert=TRUE)
+      combinedSpectrumIds <- rbind_all(lapply(names(protGroups), function(protGroup_id) {
+        tags_df <- dplyr::filter(all_tags, ibspectra_id == protGroup_id)
+        tag_cols <- c(tags_df$orig_ions_col, tags_df$orig_mass_col)
+        names(tag_cols) <- c(tags_df$ions_col, tags_df$mass_col)
+        spectrumIds <- protGroups[[protGroup_id]]@spectrumId
+        tag_cols <- tag_cols[tag_cols %in% colnames(spectrumIds)]
+        if (length(tag_cols) > 0) {
+          spectrumIds <- dplyr::rename_(spectrumIds, .dots=tag_cols)
+        }
+        # set columns of all other ibspectras to NA
+        for (col in setdiff(common_tag_cols, names(tag_cols))) {
+          spectrumIds[,col] <- NA
+        }
+        dplyr::select_(spectrumIds, .dots=c(common_spec_cols, common_tag_cols))
+      }))
+
+      message("done")
+
+      return(
+          new("ProteinGroup",
+              peptideNProtein = as.data.frame(peptideNProtein),
+              peptideSpecificity = as.data.frame(peptideSpecificity),
+              proteinGroupTable = as.data.frame(protein.group.table),
+              indistinguishableProteins = indistinguishableProteins,
+              spectrumId = as.data.frame(combinedSpectrumIds),
+              spectrumToPeptide = spectrumToPeptide,
+              isoformToGeneProduct = as.data.frame(isoforms),
+              proteinInfo = as.data.frame(proteinInfo),
+              peptideInfo = as.data.frame(peptideInfo))
+      )
+}

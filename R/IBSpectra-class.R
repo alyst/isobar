@@ -82,6 +82,11 @@ setClass("TMT6plexSpectra2",
        )
     )
 
+setClass("CombinedIBSpectra", # several experiments merged
+         contains = "IBSpectra",
+         prototype = prototype()
+)
+
 setClass("TMT10plexSpectra",
     contains = "TMTSpectra",
     prototype = prototype(
@@ -826,9 +831,45 @@ subsetIBSpectra <-
   x
 }
 
+# FIXME  combine() method
+combineIBSpectras <- function(ibspectras, ...) {
+      if (!all(sapply(ibspectras, inherits, "IBSpectra"))) {
+          stop("List of IBSpectra objects expected")
+      }
+      if (is.null(names(ibspectras))) {
+        names(ibspectras) <- LETTERS[seq_along(ibspectras)]
+      }
+      all_tags <- .combined_tag_info(ibspectras)
+      common_tag_names <- all_tags$tag_name
+      assayDataElements <- lapply(assayDataElementNames(ibspectras[[1]]), function(elemName) {
+        do.call(rbind, lapply(names(ibspectras), function(spectra_id) {
+          tags_df <- dplyr::filter(all_tags, ibspectra_id == spectra_id)
+          tag_names <- tags_df$tag_name
+          names(tag_names) <- tags_df$orig_tag_name
+          elem <- assayData(ibspectras[[spectra_id]])[[elemName]]
+          colnames(elem) <- as.character(tag_names[colnames(elem)])
+          missing_common_tags <- setdiff(common_tag_names, tag_names)
+          cur_elem_colnames <- colnames(elem)
+          elem <- cbind(elem, matrix(NA, ncol=length(missing_common_tags), nrow=nrow(elem)))
+          colnames(elem) <- c(cur_elem_colnames, missing_common_tags)
+          elem[,common_tag_names]
+        }))
+      })
+      names(assayDataElements) <- assayDataElementNames(ibspectras[[1]])
 
-
-
+      features <- lapply(ibspectras, featureData)
+      names(features) <- NULL
+      res <- new("CombinedIBSpectra",
+          assayData=do.call(assayDataNew, assayDataElements, envir=parent.frame()),
+          featureData=do.call(BiocGenerics::combine, features),
+          proteinGroup=combineProteinGroups(lapply(ibspectras, proteinGroup), all_tags),
+          reporterTagNames=all_tags$tag_name,
+          reporterTagMasses=all_tags$tag_mass,
+          isotopeImpurities=as.matrix(bdiag(lapply(ibspectras, isotopeImpurities))))
+      classLabels(res) <- all_tags$class
+      partitionLabels(res) <- all_tags$partition
+      return(res)
+}
 
 
 ### - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
