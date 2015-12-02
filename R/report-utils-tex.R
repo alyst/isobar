@@ -458,7 +458,7 @@ print_sign_proteins_tbl <- function(file,cmbn,protein.group,quant.tbl,my.protein
               " & ",length(reporter.peptides),
               " & ",n.spectra)
         if (!is.single.comparision) {
-            mycat(" & ",cmbn$r1[cmb_i]," & ",cmbn$r2[cmb_i])
+            mycat(" & ",sanitize(cmbn$r1[cmb_i])," & ",sanitize(cmbn$r2[cmb_i]))
         }
         mycat(" & ",protein.row[1,"n.spectra"])
         mycat(" & ",sprintf("\\textbf{%.2f}",10^protein.row[1,"lratio"]),sep=" ")
