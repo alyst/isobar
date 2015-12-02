@@ -289,19 +289,32 @@ number.ranges <- function(numbers) {
     }
 }
 
+.channel_info <- function(tags,cl=NULL) {
+  data.frame(r = tags,
+             class = as.character(cl),
+             stringsAsFactors = FALSE) %>%
+  # Filter NA channels
+  dplyr::filter(!is.na(r) & !is.na(class)) %>%
+  dplyr::group_by(class) %>%
+  mutate(n_class_channels = n()) %>% # get the number of intra-class channels (within the same partition)
+  ungroup()
+}
 
 .get.cmbn <- function(combn,tags,cl) {
   if (!all(unlist(combn) %in% cl))
     stop("incorrect combn specification")
 
-  res <- c()
-  for (cc in combn)
-    for (tag1 in tags[cl==cc[1]&!is.na(cl)])
-      for (tag2 in tags[cl==cc[2]&!is.na(cl)])
-        res <- cbind(res,c(r1=tag1,r2=tag2,
-                     class1=cc[1],
-                     class2=cc[2]))
-  res
+  combn_df <- data.frame(
+    class1 = sapply(combn, function(cc) cc[1]),
+    class2 = sapply(combn, function(cc) cc[2]),
+    stringsAsFactors = FALSE
+  )
+  chn_info <- .channel_info(tags,cl,ptn)
+
+  merge(chn_info, chn_info,
+        by=c(), suffixes=c("1", "2")) %>%
+    dplyr::select(r1, r2, class1, class2) %>%
+    dplyr::semi_join(combn_df)
 }
 
 

@@ -683,10 +683,11 @@ estimateRatioForPeptide <- function(peptide,ibspectra,noise.model,channel1,chann
                                  channel1,channel2,...)
       } else {
         if (is.matrix(peptide)) peptide <- as.data.frame(peptide)
-        r <- rbind_all(.lapply(seq_len(nrow(peptide)),function(pep_ix)
+        r <- do.call(rbind, lapply(seq_len(nrow(peptide)),function(pep_ix)
             .call.estimateRatio(peptide[pep_ix,,drop=FALSE],"peptide",ibspectra,noise.model,
                                             channel1,channel2,...)))
       }
+      r <- as.data.frame(r)
       attr(r,"input") <- peptide
       attr(r,"combine") <- combine
       return(r)
@@ -1030,127 +1031,84 @@ combn.matrix <- function(x,method="global",cl=NULL,vs=NULL) {
     stop(sprintf("cl argument does not have the same length as x (cl: %s, x: %s).",
                  length(cl),length(x)))
 
-  # Filter NA channels
-  if (!is.null(cl)) {
-    x <- x[!is.na(cl)]
-    cl <- cl[!is.na(cl)]
-  }
-
   if (!is.null(vs) && !is.character(vs))
     vs <- as.character(vs)
 
+  chn_info <- .channel_info(x, cl)
+  if (nrow(chn_info) == 0)
+    stop("No valid channels, make sure channel tags and classes are properly specified")
+
+  # cross join within the partition
+  chnXchn <- merge(chn_info, chn_info, by=c(), suffixes=c("1", "2")) %>%
+    dplyr::select(r1, r2, class1, class2)
+
   # Create a combn matrix with all combinations of channels to consider
-  if (method == "versus.class" || method == "versus.channel") {
-    if (method == "versus.channel") {
-      if (is.null(vs)) {
-        vs = x[1]
-        warning("vs argument is null, but method is versus.channel. Using channel '",vs,"'")
-      }
-      if (!vs %in% x) stop("vs argument must be one of [",paste(x,collapse=", "),"]")
-      pos <- which(x==vs)
-      cmbn <- rbind(vs,x[-pos])
-      if (!is.null(cl)) {
-        vs.class <- cl[pos]
-        cmbn <- rbind(cmbn,vs.class,cl[-pos])
-      }
+  if (method == "versus.channel") {
+    if (is.null(vs)) {
+      vs = chn_info$r[1]
+      warning("vs argument is null, but method is versus.channel. Using channel '",vs,"'")
     }
-    if (method == "versus.class") {
-      if (is.null(vs)) {
-        vs = cl[1]
-        warning("vs argument is null, but method is versus.channel. Using channel '",vs,"'")
-      }
-
-      if (!all(vs %in% cl)) stop("vs argument must be one of [",paste(cl,collapse=", "),"]")
-      if (is.null(cl)) stop("class labels must be given with method versus.class")
-      pos <- which(cl==vs)
-      cmbn <- rbind(x[pos],rep(x[-pos],each=length(pos)))
-      cmbn <- rbind(cmbn,vs,rep(cl[-pos],each=length(pos)))
-
+    if (!vs %in% chn_info$r) stop("vs argument must be one of [",paste(chn_info$r, collapse=", "),"]")
+    cmbn <- dplyr::filter(chnXchn, r1 == vs & r2 != r1)
+  } else if (method == "versus.class") {
+    if (is.null(vs)) {
+      vs = chn_info$class[1]
+      warning("vs argument is null, but method is versus.channel. Using channel '",vs,"'")
     }
+    if (!vs %in% chn_info$class) stop("vs argument must be one of [",paste(chn_info$class, collapse=", "),"]")
+    cmbn <- dplyr::filter(chnXchn, class1 == vs & class2 != class1)
   } else if (method == "global") {
-    cmbn <- combn(x,2) # take all combinations
-    if (!is.null(cl))
-      cmbn <- rbind(cmbn,combn(cl,2))
-  } else {
-    t <- table(cl)[unique(cl)]
-
-    if (method == "intraclass") {
-      if (length(t[t==1]) > 0)
+    cmbn <- dplyr::filter(chnXchn, r1 < r2) # take all combinations
+  } else if (method == "intraclass") {
+    if (any(chn_info$n_class_channels == 1)) {
         warning("Some class labels are not repeated - ",
                 "those are ignored in intraclass ratios.")
-
-      cmbn <- do.call(cbind,lapply(names(t)[t>1],
-                                    function(xx) rbind(combn(x[which(cl==xx)],2),class1=xx,class2=xx)))
-
-    } else if (method == "interclass") {
-      if (length(t) == 1) {
-        warning("Cannot compute interclass ratios when there is only one class - taking ratios vs ALL")
-        cmbn <- matrix(c(x,rep("ALL",length(x))),nrow=2,byrow=TRUE)
-      } else {
-        cmbn <- matrix(nrow=4,ncol=0)
-        for (name in names(t)) {
-          pos=which(cl==name);posn=which(cl!=name);
-          for (i in pos)
-            for (j in posn) {
-              cc <- c(x[i],x[j],cl[i],cl[j])
-              if (ncol(cmbn) > 0 &
-                  any(apply(cmbn,2,function(xx) identical(rev(cc[1:2]),xx[1:2]))))
-                next;
-              cmbn <- cbind(cmbn,cc)
-            }
-        }
-      }
-    } else {
-      stop(paste("method",method,"not implemented."))
     }
+    cmbn <- dplyr::filter(chnXchn, class1 == class2 & r1 < r2)
+  } else if (method == "interclass") {
+    if (n_distinct(chn_info$class) == 1) {
+      warning("Cannot compute interclass ratios when there is only one class - taking ratios vs ALL")
+      cmbn <- dplyr::filter(chnXchn, r1 == r2) %>%
+              mutate(r2 = 'ALL')
+    } else {
+      cmbn <- dplyr::filter(chnXchn, class1 < class2)
+    }
+  } else {
+    stop("ratio-generating method '",method,"' not implemented.")
   }
-  if (nrow(cmbn) == 2) rownames(cmbn) <- c("r1","r2")
-  else if (nrow(cmbn) == 4) rownames(cmbn) <- c("r1","r2","class1","class2")
   return(cmbn)
 }
 
 ## create a table with all protein ratios
 combn.protein.tbl <- function(cmbn, reverse=FALSE, ...) {
-
-  ratios <- do.call(rbind,apply(cmbn,2,function(x) {
-    if (reverse)
-      if (length(x) == 4)
-        x <- x[c(2,1,4,3)]
-      else
-        x <- rev(x)
-
-    message("ratios ",x[2]," vs ",x[1])
-    r <- estimateRatio(channel1=x[1],channel2=x[2],...)
+  if (reverse) cmbn <- dplyr::select(cmbn, r1=r2, r2=r1, class1=class2, class2=class1)
+  ratios <- dplyr::rowwise(cmbn) %>% dplyr::do({
+    message("ratios ",.$r2,"(",.$class2,")",
+            " / ",.$r1,"(",.$class1,")")
+    r <- estimateRatio(channel1=as.character(.$r1), channel2=as.character(.$r2),...)
     if (class(r)=="numeric") {
       r <- t(r)
       rownames(r) <- "prot1"
     }
 
-    if (is.matrix(attr(r,"input")))
-      df <- data.frame(attr(r,"input"),r,stringsAsFactors=FALSE)
-    else
-     df <- data.frame(r,stringsAsFactors=FALSE)
+    df <- if (is.data.frame(attr(r,"input"))) { cbind(attr(r,"input"), r)
+    } else { as.data.frame(r,stringsAsFactors=FALSE) }
 
     if (!is.null(rownames(r)) && any(rownames(r) != as.character(seq_len(nrow(r)))))
       df$ac <- rownames(r)
-    rownames(df) <- NULL
 
-    df$r1 <- x[1]; df$r2 <- x[2]
-    if (length(x) == 4) {
-      df$class1 <- x[3]; df$class2 <- x[4]
-    }
-    return(df)
-  }))
+    return(cbind(., df))
+  })
+
+  if (all(c("peptide","modif") %in% colnames(ratios)))
+    ratios <- dplyr::arrange(ratios, peptide, modif, r1, r2)
+  else
+    ratios <- dplyr::arrange(ratios, ac, r1, r2)
 
   attr(ratios,"arguments") <- list(...)
-
   attr(ratios,"cmbn") <- cmbn
   attr(ratios,"reverse") <- reverse
 
-  if (all(c("peptide","modif") %in% colnames(ratios)))
-    ratios <- ratios[order(ratios[,'peptide'],ratios[,'modif'],ratios$r1,ratios$r2),]
-  else
-    ratios <- ratios[order(ratios[,'ac'],ratios$r1,ratios$r2),]
 
   return(ratios)
 }
@@ -1175,7 +1133,7 @@ ratiosReshapeWide <- function(quant.tbl,vs.class=NULL,sep=".",cmbn=NULL,short.na
   quant.tbl$ratios.subset.1..by.column. <- NULL
 
   if (!is.null(cmbn)) {
-    sel <- paste(quant.tbl$r1,quant.tbl$r2) %in% paste(cmbn[1,],cmbn[2,])
+    sel <- paste(quant.tbl$r1,quant.tbl$r2) %in% paste(cmbn$r1, cmbn$r2)
     quant.tbl <- quant.tbl[sel,]
   }
   classes.unique <- "class1" %in% colnames(quant.tbl) &&
@@ -1251,7 +1209,8 @@ ratiosReshapeWide <- function(quant.tbl,vs.class=NULL,sep=".",cmbn=NULL,short.na
 proteinRatios <-
   function(ibspectra, noise.model, reporterTagNames=NULL,
            proteins=reporterProteins(proteinGroup(ibspectra)),peptide=NULL,
-           cl=classLabels(ibspectra), combn.method="global",combn.vs=NULL,
+           cl=classLabels(ibspectra),
+           combn.method="global",combn.vs=NULL,
 	   symmetry=FALSE,
            summarize=FALSE,summarize.method="mult.pval",
            min.detect=NULL,strict.sample.pval=TRUE,strict.ratio.pval=TRUE,orient.div=0,
@@ -1271,11 +1230,12 @@ proteinRatios <-
   if (is.null(cl) && is.null(cmbn)) stop("please supply class labels as argument cl or a cmbn matrix")
 
   if (is.null(cmbn))
-    cmbn <- combn.matrix(reporterTagNames,combn.method,cl,vs=combn.vs)
+    cmbn <- combn.matrix(reporterTagNames,combn.method,cl=cl,vs=combn.vs)
 
-  if (ncol(cmbn) < 1)
+  if (nrow(cmbn) < 1)
     stop("No possible combination for reporters [",paste(reporterTagNames,sep=","),"]",
-         " w/ classes [",paste(cl,sep=","),"] and combn.method ",combn.method," possible.",
+         " w/ classes [",paste(cl,sep=","),"]",
+         " and combn.method ",combn.method," possible.",
          " summarize=",ifelse(summarize,"TRUE","FALSE"))
 
   ratios <- combn.protein.tbl(cmbn,reverse=reverse,
@@ -1306,9 +1266,9 @@ proteinRatios <-
 
     ## calculate the number of combinations for each class-combination
     if (reverse)
-      n.combination <- table(cmbn["class2",],cmbn["class1",])
+      n.combination <- table(cmbn$class2, cmbn$class1)
     else
-      n.combination <- table(cmbn["class1",],cmbn["class2",])
+      n.combination <- table(cmbn$class1, cmbn$class2)
 
     if (nrow(n.combination)==1 & ncol(n.combination)==1)
       n.combination <- as.numeric(n.combination)

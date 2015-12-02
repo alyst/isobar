@@ -63,12 +63,13 @@ cat(sprintf("\\newcommand{\\bndt}{%s}\n",bndt),"\n")
 
 if (!"class1" %in% colnames(quant.tbl)) quant.tbl[["class1"]] <- quant.tbl[["r1"]]
 if (!"class2" %in% colnames(quant.tbl)) quant.tbl[["class2"]] <- quant.tbl[["r2"]]
-cmbn <- t(unique(quant.tbl[,c("r1","r2")]))
-cmbn.class <- sanitize(t(unique(quant.tbl[,c("class1","class2")])))
-is.single.comparision <- ncol(cmbn) ==1
+cmbn <- dplyr::select(quant.tbl, r1, r2) %>% dplyr::distinct()
+cmbn.class <- dplyr::select(quant.tbl, class1, class2) %>% dplyr::distinct() %>%
+              dplyr::mutate(class1=sanitize(class1), class2=sanitize(class2))
+is.single.comparision <- nrow(cmbn) ==1
 
-cat(sprintf("\\newcommand{\\mr}[1]{\\multirow{%s}{*}{#1}}\n",ncol(cmbn)))
-cat(sprintf("\\newcommand{\\mrp}[1]{\\multirow{%s}{*}{\\parbox{\\linewidth}{#1}}}\n",ncol(cmbn)))
+cat(sprintf("\\newcommand{\\mr}[1]{\\multirow{%s}{*}{#1}}\n",nrow(cmbn)))
+cat(sprintf("\\newcommand{\\mrp}[1]{\\multirow{%s}{*}{\\parbox{\\linewidth}{#1}}}\n",nrow(cmbn)))
 @
 
 \makeatletter
@@ -114,7 +115,7 @@ print_classlabels_tbl(classLabels(ibspectra),reporterTagNames(ibspectra))
 %% SIGNIFICANT PROTEINS TABLE
 <<significantly.dfferent.proteins,echo=FALSE,results=tex>>=
 if (is.single.comparision) {
-  title.comp <- paste(cmbn.class[2,1],"/",cmbn.class[1,1])
+  title.comp <- paste(cmbn.class$class2[1],"/",cmbn.class$class1[1])
 } else {
   title.comp <- NULL
 }
@@ -169,7 +170,7 @@ cat("\\normalsize\n")
 
 <<not.quantified,echo=FALSE,results=tex>>=
 tt <- table(quant.tbl$ac[is.na(quant.tbl[["lratio"]])])
-proteins.notquantified <- names(tt)[tt==ncol(cmbn)]
+proteins.notquantified <- names(tt)[tt==nrow(cmbn)]
 
 if (length(proteins.notquantified) > 0) {
 cat("\\subsection{Not Quantified Proteins}\n")

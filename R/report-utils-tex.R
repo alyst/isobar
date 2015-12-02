@@ -364,8 +364,8 @@ tikz.proteingroup <- function(protein.group,reporter.protein.g,show.pos,show.hea
     gene.names <- c(gene.names,prot.gene.name)
   }
   if (!is.single.comparision) {
-    if (length(gene.names) > ncol(cmbn) - 1) {
-      gene.names <- gene.names[seq_len(ncol(cmbn)-1)]
+    if (length(gene.names) > nrow(cmbn) - 1) {
+      gene.names <- gene.names[seq_len(nrow(cmbn)-1)]
       gene.names[length(gene.names)] <- paste(gene.names[length(gene.names)],", \\dots",sep="")
     }
   }
@@ -420,16 +420,16 @@ sanitize <- function(str,dash=TRUE) {
 
 print_sign_proteins_tbl <- function(file,cmbn,protein.group,quant.tbl,my.protein.infos,bnd) {
 
-  is.single.comparision <- ncol(cmbn) ==1
+  is.single.comparision <- nrow(cmbn) ==1
   mycat <- function(...,append=TRUE,sep="")
     cat(...,file=file,append=append,sep=sep)
 
   print_longtablehdr("protein",is.single.comparision,FALSE,file=file)
   draw.hline <- FALSE
 
-  for (cmb_i in seq_len(ncol(cmbn))) {
-    sel <- quant.tbl[["r1"]]==cmbn[1,cmb_i] &
-           quant.tbl[["r2"]]==cmbn[2,cmb_i] &
+  for (cmb_i in seq_len(nrow(cmbn))) {
+    sel <- quant.tbl[["r1"]]==cmbn$r1[cmb_i] &
+           quant.tbl[["r2"]]==cmbn$r2[cmb_i] &
            quant.tbl[["is.significant"]] == 1
     sel[is.na(sel)] <- FALSE
     if (any(sel)) {
@@ -458,7 +458,7 @@ print_sign_proteins_tbl <- function(file,cmbn,protein.group,quant.tbl,my.protein
               " & ",length(reporter.peptides),
               " & ",n.spectra)
         if (!is.single.comparision) {
-            mycat(" & ",cmbn[1,cmb_i]," & ",cmbn[2,cmb_i])
+            mycat(" & ",cmbn$r1[cmb_i]," & ",cmbn$r2[cmb_i])
         }
         mycat(" & ",protein.row[1,"n.spectra"])
         mycat(" & ",sprintf("\\textbf{%.2f}",10^protein.row[1,"lratio"]),sep=" ")
@@ -501,7 +501,7 @@ print_protein_quant_tbl <- function(file="",
 
   message("Writing protein quantifications table ... ",append.lf=FALSE)
 
-  is.single.comparision <- ncol(cmbn) ==1
+  is.single.comparision <- nrow(cmbn) ==1
   mycat <- function(...,append=TRUE,sep="")
     cat(...,file=file,append=append,sep=sep)
 
@@ -535,7 +535,7 @@ print_protein_quant_tbl <- function(file="",
         " & ",mr(length(reporter.peptides)),
         " & ",mr(length(spectra)),sep=" ")
 
-    for (i in seq_len(ncol(cmbn))) {
+    for (i in seq_len(nrow(cmbn))) {
       if (i > 1) { mycat(paste(rep("&",4),collapse=" ")) }
       if (!is.single.comparision) {
           mycat(" & ",protein.rows$r1[i])
@@ -552,9 +552,9 @@ print_protein_quant_tbl <- function(file="",
                                protein.rows$sd[i],bnd))
       }
       mycat(" \\\\")
-      if (i < ncol(cmbn)) mycat("*\n")
+      if (i < nrow(cmbn)) mycat("*\n")
     }
-    if (protein != proteins.n.group$ac[nrow(proteins.n.group)] && ncol(cmbn) > 1) {
+    if (protein != proteins.n.group$ac[nrow(proteins.n.group)] && nrow(cmbn) > 1) {
         mycat(" \\midrule[0.02em] \n\n");
     }
   }
@@ -592,13 +592,13 @@ print_protein_notquant_tbl <- function(file="",
                                     quant.tbl,
                                     my.protein.infos) {
 
-  is.single.comparision <- ncol(cmbn) ==1
+  is.single.comparision <- nrow(cmbn) ==1
   mycat <- function(...,append=TRUE,sep="")
     cat(...,file=file,append=append,sep=sep)
 
 
   tt <- table(quant.tbl$ac[is.na(quant.tbl[["lratio"]])])
-  proteins.notquantified <- names(tt)[tt==ncol(cmbn)]
+  proteins.notquantified <- names(tt)[tt==nrow(cmbn)]
   mycat("\\begin{longtable}{rXrrr}",
   "  \\#",
   "  & \\textbf{protein}",
