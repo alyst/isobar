@@ -67,7 +67,7 @@ theoretical masses.
 \subsection*{Reporter Intensities Normalization}
 
 <<echo=FALSE,results=tex>>=
-reporter.tags <- reporterTagNames(ibspectra)
+reporter.tags <- sanitize(reporterTagNames(ibspectra))
 n.factors <- setNames(rep("n.n.", length(reporter.tags)),reporter.tags)
 nn.factors <- ibspectra@log[grep("normalization.multiplicative.factor",
                                  rownames(ibspectra@log)),"Message"]
@@ -185,9 +185,9 @@ if (!is.null(ratiodistr)) {
   cat("\\end{verbatim}\n\n")
   if (!is.null(attr(ratiodistr,"method"))) {
      m <- attr(ratiodistr,"method")
-     classLabels <- attr(ratiodistr,"cl")
+     classLabels <- sanitize(attr(ratiodistr,"cl"))
      t <- table(classLabels)
-     tagNames <- attr(ratiodistr,"tagNames")
+     tagNames <- sanitize(attr(ratiodistr,"tagNames"))
 
      cat("Distribution calculated on \\emph{",m,"} ratios",sep="")
      classTxt <- sapply(names(t),function(class)
