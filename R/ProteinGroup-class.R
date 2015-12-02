@@ -1208,7 +1208,7 @@ setReplaceMethod("proteinInfo","ProteinGroup",
                  function(x,value) {
                    x@proteinInfo <- value
                    if ('sequence' %in% colnames(value) && all(is.na(x@peptideInfo$start.pos))) {
-                     message("Recaculating peptide start position based on sequence")
+                     message("Recalculating peptide start position based on sequence")
                      x@peptideInfo <- calcPeptidePosition(x@peptideInfo,value)
                    }
                    x
@@ -1432,7 +1432,7 @@ human.protein.names <- function(my.protein.info) {
     }
     collapsed.gene_name <- dplyr::select(collapsed.splicevariant, gene_name, ac_link, ac_nolink, protein_name) %>%
           dplyr::distinct() %>% dplyr::group_by(gene_name) %>%
-          dplyr::do({collapse_gene_name.f(.)})
+          dplyr::do({collapse.gene_name.f(.)})
     return(collapsed.gene_name)
 }
 

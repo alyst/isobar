@@ -1081,11 +1081,18 @@ combn.matrix <- function(x,method="global",cl=NULL,vs=NULL,ptn=NULL) {
 
 ## create a table with all protein ratios
 combn.protein.tbl <- function(cmbn, reverse=FALSE, ...) {
-  if (reverse) cmbn <- dplyr::select(cmbn, r1=r2, r2=r1, class1=class2, class2=class1)
-  ratios <- dplyr::rowwise(cmbn) %>% dplyr::do({
-    message("ratios ",.$r2,"(",.$class2,")",
-            " / ",.$r1,"(",.$class1,")")
-    r <- estimateRatio(channel1=as.character(.$r1), channel2=as.character(.$r2),...)
+  cmbn <- if (reverse) {
+    dplyr::select(cmbn, r1=r2, r2=r1, class1=class2, class2=class1)
+  } else {
+    dplyr::select(cmbn, r1, r2, class1, class2)
+  }
+  ratios <- do.call(rbind, .lapply(seq_len(nrow(cmbn)), function(cmbn_ix) {
+    r1 <- as.character(cmbn$r1[cmbn_ix])
+    r2 <- as.character(cmbn$r2[cmbn_ix])
+    class1 <- cmbn$class1[cmbn_ix]
+    class2 <- cmbn$class2[cmbn_ix]
+    message("ratios ",r2,"(",class2,") / ",r1,"(",class1,")")
+    r <- estimateRatio(channel1=r1, channel2=r2, ...)
     if (class(r)=="numeric") {
       r <- t(r)
       rownames(r) <- "prot1"
@@ -1097,8 +1104,8 @@ combn.protein.tbl <- function(cmbn, reverse=FALSE, ...) {
     if (!is.null(rownames(r)) && any(rownames(r) != as.character(seq_len(nrow(r)))))
       df$ac <- rownames(r)
 
-    return(cbind(., df))
-  })
+    mutate(df, class1 = class1, class2 = class2, r1 = r1, r2 = r2)
+  }))
 
   if (all(c("peptide","modif") %in% colnames(ratios)))
     ratios <- dplyr::arrange(ratios, peptide, modif, r1, r2)

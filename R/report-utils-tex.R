@@ -499,7 +499,7 @@ print_protein_quant_tbl <- function(file="",
                                     my.protein.infos,
                                     bnd) {
 
-  message("Writing protein quantifications table ... ",append.lf=FALSE)
+  message("Writing protein quantifications table ... ", appendLF=FALSE)
 
   is.single.comparision <- nrow(cmbn) ==1
   mycat <- function(...,append=TRUE,sep="")
