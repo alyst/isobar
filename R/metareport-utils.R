@@ -170,9 +170,9 @@ create.meta.reports <- function(properties.file="meta-properties.R",
     colnames(merged.table) <- gsub("p_value.rat", "p.value.rat", colnames(merged.table)) # revert to the p.value.rat
 
     #merged.table$p.value.rat.fdr.adj <- p.adjust(merged.table$p.value.rat)
-    merged.table <- ddply(merged.table,c("class1","class2"),function(x) 
-                                 cbind(x,p.value.fdr.adj=p.adjust(x$p.value,"fdr"),
-                                         p.value.rat.fdr.adj=p.adjust(x$p.value.rat,"fdr")))
+    merged.table <- dplyr::group_by(merged.table, class1, class2) %>%
+      mutate(p.value.fdr.adj=p.adjust(p.value,"fdr"),
+             p.value.rat.fdr.adj=p.adjust(p.value.rat,"fdr")) %>% ungroup()
     merged.table$is.significant <- (merged.table$p.value.fdr.adj < 0.05) & zscore.any2.5 & zscore.all1
 
     merged.table$comp <- paste0(merged.table[[merge.cols[[2]]]],"/",merged.table[[merge.cols[[1]]]])
@@ -199,10 +199,11 @@ create.meta.reports <- function(properties.file="meta-properties.R",
                            load(quant.tbls[idx],envir=env)
                            quant.tbl <- get(ls(envir=env),envir=env)
                            q <- quant.tbl[,intersect(cols,colnames(quant.tbl))]
-                           q <- ddply(q,c("class1","class2"),function(x)
-                                 cbind(x,zscore.indiv=round(.calc.zscore(x[,"lratio"]),4)))
-                           q[,"lratio"] <- round(q[,"lratio"],4)
-                           q[,"variance"] <- round(q[,"variance"],4)
+                           q <- dplyr::group_by(q, class1, class2) %>%
+                                mutate(zscore.indiv=round(.calc.zscore(lratio),4)) %>%
+                                ungroup() %>%
+                                mutate(lratio = round(lratio, 4),
+                                       variance = round(variance, 4))
                            if (format=="wide") {
                              sel <- !colnames(q) %in% merge.by
                              colnames(q)[sel] <- paste(colnames(q)[sel],gsub("[./]","",samples[idx]),sep=".")

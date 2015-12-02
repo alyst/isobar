@@ -172,7 +172,7 @@ draw.proteingroup.row <- function(name,protein.group,reporter.protein.g,file=fil
     for (ac.i in seq_along(my.acs)) {
       if (n.row > 1) mycat(" & ")
       sel <- my.protein.info$accession == my.acs[ac.i]
-      var.string <- number.ranges(my.protein.info$splicevariant[sel])
+      var.string <- number.ranges(as.integer(my.protein.info$splicevariant[sel]))
       #cat(protein.i,"&")
       if (show.pos && ncol(gmp$group.member.peptides)>1) {
         if (ac.i == 1)
@@ -228,7 +228,7 @@ draw.protein.group <- function(protein.group,reporter.protein.g) {
     my.protein.info <- my.protein.info(protein.group,x)
     for (ac in unique(my.protein.info$accession)) {
       sel <- my.protein.info$accession == ac
-      var.string <- number.ranges(my.protein.info$splicevariant[sel])
+      var.string <- number.ranges(as.integer(my.protein.info$splicevariant[sel]))
       if (show.pos) cat(protein.i,"&")
       cat(paste(sprintf("\\uniprotlink{%s}",sanitize(ac,dash=FALSE)),
           ifelse(is.na(var.string),"",var.string),
@@ -481,20 +481,16 @@ print_groupsize <- function (r,t) {
 }
 
 get_n_proteins <- function(quant.tbl,sign=FALSE,is.na=FALSE) {
-  n.quant <- ddply(quant.tbl,
-                   c("class1","class2"),
-                   function(x) {
-                     sel <- !is.na(x[["lratio"]])
-                     if (is.na) sel <- !sel
-                     if (sign) sel <- sel & x[["is.significant"]]
-                     sum(sel)
-                   })
-  n.quant <- n.quant[n.quant[["V1"]]>0,]
+  n.quant <- quant.tbl %>%
+    mutate(is_sel = (is.na == is.na(lratio)) & (!sign | is.significant)) %>%
+    dplyr::group_by(class1, class2) %>%
+    dplyr::summarize(n_quant = sum(is_sel)) %>%
+    ungroup() %>% dplyr::filter( n_quant > 0 )
 
   paste(sprintf("%s/%s: %s",
                     sanitize(n.quant[["class2"]]),
                     sanitize(n.quant[["class1"]]),
-                    n.quant[["V1"]]),collapse="; ")
+                    n.quant[["n_quant"]]),collapse="; ")
 }
 
 print_protein_quant_tbl <- function(file="",
@@ -514,11 +510,9 @@ print_protein_quant_tbl <- function(file="",
 
   print_longtablehdr("protein",is.single.comparision,TRUE,file=file)
 
-  proteins.n.group <- unique(quant.tbl[,c('ac','group')])
-
+  proteins.n.group <- dplyr::select(quant.tbl, ac, group) %>% dplyr::distinct() %>% dplyr::arrange(group)
   for (protein in proteins.n.group$ac) {
-    protein.rows <- quant.tbl[quant.tbl[["ac"]]==protein,,drop=FALSE]
-    protein.rows <- protein.rows[order(protein.rows[["r1"]],protein.rows[["r2"]]),,drop=FALSE]
+    protein.rows <- dplyr::filter(quant.tbl, ac == protein) %>% dplyr::arrange(r1, r2)
     protein.groupnumber <- protein.rows$group[1]
     prot.info <- my.protein.infos[[protein]]
 
@@ -614,8 +608,7 @@ print_protein_notquant_tbl <- function(file="",
   "\\endhead",sep="\n",append=FALSE)
 
   for (protein in proteins.notquantified) {
-    protein.rows <- quant.tbl[quant.tbl[["ac"]]==protein,,drop=FALSE]
-    protein.rows <- protein.rows[order(protein.rows[["r1"]],protein.rows[["r2"]]),,drop=FALSE]
+    protein.rows <- dplyr::filter(quant.tbl, ac == protein) %>% dplyr::arrange(r1, r2)
     protein.groupnumber <- protein.rows$group[1]
     prot.info <- my.protein.infos[[protein]]
 

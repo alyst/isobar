@@ -396,18 +396,17 @@ calculate.mult.sample.pvalue <- function(lratio,ratiodistr,strict.pval,lower.tai
 
 adjust.ratio.pvalue <- function(quant.tbl,p.adjust,sign.level,globally=FALSE) {
   if (globally) {
-    quant.tbl[,'p.value.rat.adjusted'] <- p.adjust(quant.tbl[,'p.value.rat'], p.adjust)
-    quant.tbl[,'p.value.adjusted'] <- p.adjust(quant.tbl[,'p.value'], p.adjust)
-    quant.tbl[,'is.significant'] <- quant.tbl[,'is.significant'] & quant.tbl[,'p.value.adjusted'] < sign.level
+    quant.tbl <- mutate(quant.tbl,
+                        p.value.rat.adjusted = p.adjust(p.value.rat, p.adjust),
+                        p.value.adjusted = p.adjust(p.value, p.adjust),
+                        is.significant = is.significant & p.value.adjusted <= sign.level)
   } else {
     comp.cols <- c("r1","r2","class1","class2")
     comp.cols <- comp.cols[comp.cols %in% colnames(quant.tbl)]
-    quant.tbl <- ddply(quant.tbl,comp.cols,function(x) {
-      x[,'p.value.rat.adjusted'] <- p.adjust(x[,'p.value.rat'], p.adjust)
-      x[,'p.value.adjusted'] <- p.adjust(x[,'p.value'], p.adjust)
-      x[,'is.significant'] <- x[,'is.significant'] & x[,'p.value.adjusted'] < sign.level
-      x
-    })
+    quant.tbl <- dplyr::group_by_(quant.tbl, comp.cols) %>%
+      mutate(p.value.rat.adjusted = p.adjust(p.value.rat, p.adjust),
+             p.value.adjusted = p.adjust(p.value, p.adjust)) %>%
+      ungroup() %>% mutate(is.significant = is.significant & p.value.adjusted <= sign.level)
   }
   quant.tbl
 }
@@ -425,16 +424,17 @@ correct.peptide.ratios <- function(ibspectra, peptide.quant.tbl, protein.quant.t
   q.protein.acs <- strsplit(all.q.prots,",")
 
   pi <- protein.group.combined@peptideInfo
-  pi <- merge(pi,as.data.frame(isobar:::.as.matrix(protein.group.combined@indistinguishableProteins,
-                                                   colnames=c("protein","protein.g")),
+  pi <- merge(pi,as.data.frame(.as.matrix(protein.group.combined@indistinguishableProteins,
+                                          colnames=c("protein","protein.g")),
                                stringsAsFactors=FALSE))
-  pi <- pi[pi[["protein.g"]] %in% reporterProteins(protein.group.combined),]
-  pep.to.ac <- isobar:::.as.vect(unique(pi[,c('peptide','protein.g')]))
+  pi <- dplyr::filter(pi, protein.g %in% reporterProteins(protein.group.combined))
+  pep.to.ac <- .as.vect(dplyr::select(pi, peptide, protein.g) %>% dplyr::distinct())
 
   peptide.quant.tbl$ac <- pep.to.ac[peptide.quant.tbl$peptide]
 
   # merged peptide and protein quant table
-  tbl <- merge(peptide.quant.tbl,protein.quant.tbl[,c("ac","r1","r2","lratio","variance","is.significant")],
+  tbl <- merge(peptide.quant.tbl,
+               protein.quant.tbl[,c("ac","r1","r2","lratio","variance","is.significant")],
                by = c("ac","r1","r2"), all.x = TRUE, suffixes=c(".modpep",".prot"))
 
   tbl$lratio <- .cn(tbl,'lratio.modpep') - .cn(tbl,'lratio.prot')
@@ -663,17 +663,16 @@ estimateRatioForProtein <- function(protein,ibspectra,noise.model,channel1,chann
           stop("method ",method," not known")
         }
       } else {
-        res <- ldply(protein,function(individual.protein) {
-             if (individual.protein %in% quant.w.grouppeptides) 
-               specificity <- c(GROUPSPECIFIC,specificity)
-
-             .call.estimateRatio(individual.protein,"protein",ibspectra,
+        prots <- data.frame(protein = protein,
+                            is_groupspec_quant = protein %in% quant.w.grouppeptides,
+                            stringsAsFactors = FALSE)
+        res <- do.call(rbind, lapply(seq_len(nrow(prots)), function(prot_ix) {
+            .call.estimateRatio(prots$protein[prot_ix],"protein",ibspectra,
                                 noise.model,channel1,channel2,method=method,...,
-                                specificity=specificity)
-            },.parallel=isTRUE(getOption('isobar.parallel'))
-        )
-        rownames(res) <- protein
-        res
+                                specificity=if (prots$is_groupspec_quant[prot_ix]) c(GROUPSPECIFIC,specificity) else specificity)
+            }))
+        rownames(res) <- prots$protein
+        as.data.frame(res)
         #res[apply(res,2,!function(r) all(is.na(r))),]
       }
     }
@@ -683,17 +682,10 @@ estimateRatioForPeptide <- function(peptide,ibspectra,noise.model,channel1,chann
         r <- .call.estimateRatio(peptide,"peptide",ibspectra,noise.model,
                                  channel1,channel2,...)
       } else {
-        if (is.data.frame(peptide))
-          peptide <- as.matrix(peptide)
-        if (is.matrix(peptide)) {
-          r <- ldply(seq_len(nrow(peptide)),function(p_i)
-                  .call.estimateRatio(peptide[p_i,,drop=FALSE],"peptide",ibspectra,noise.model,
-                                      channel1,channel2,...),.parallel=isTRUE(getOption('isobar.parallel')))
-        } else {
-          r <- ldply(peptide,function(individual.peptide)
-                        .call.estimateRatio(individual.peptide,"peptide",ibspectra,noise.model,
-                                            channel1,channel2,...),.parallel=isTRUE(getOption('isobar.parallel')))
-        }
+        if (is.matrix(peptide)) peptide <- as.data.frame(peptide)
+        r <- rbind_all(.lapply(seq_len(nrow(peptide)),function(pep_ix)
+            .call.estimateRatio(peptide[pep_ix,,drop=FALSE],"peptide",ibspectra,noise.model,
+                                            channel1,channel2,...)))
       }
       attr(r,"input") <- peptide
       attr(r,"combine") <- combine
@@ -782,14 +774,17 @@ setMethod("estimateRatio",
               return(res)
             } else {
               cmbn <- t(combn(channels,2))
-              res <- estimateRatio(ibspectra,noise.model=noise.model,
-                                   channel1=cmbn[i,1],channel2=cmbn[i,2],
-                                   peptide=peptide,combine=FALSE,...)
+              names(cmbn) <- c('r1', 'r2')
 
-              apply(cmbn,1,function(i)
-                    cbind(r1=cmbn[i,1],r2=cmbn[i,2],ac=rownames(res),res))
+              apply(cmbn,1,function(i) {
+                    res <- estimateRatio(ibspectra,noise.model=noise.model,
+                                         channel1=cmbn$r1[i],channel2=cmbn$r2[i],
+                                         peptide=peptide,combine=FALSE,...)
+                    cbind(r1=cmbn$r1[i],r2=cmbn$r2[i],
+                          ac=rownames(res),res)
+              })
             }
-            }
+          }
 )
 
 
@@ -900,22 +895,17 @@ setMethod("estimateRatio",
     ## using match.call to get the call with all arguments
     ecall <- match.call(expand.dots = TRUE)
 
-    res  <- c()
-    for (c1 in channel1) {
-      for (c2 in channel2) {
+    res <- expand.grid(channel1 = channel1,
+                       channel2 = channel2) %>% rowwise() %>%
+           dplyr::do({
         my.ecall <- ecall
-        my.ecall[["channel1"]] <- c1
-        my.ecall[["channel2"]] <- c2
-
+        my.ecall[["channel1"]] <- .$channel1
+        my.ecall[["channel2"]] <- .$channel2
         ## using eval() on my.ecall for recursive calling of this function
-        res <- rbind(res,
-                data.frame(channel1=c1,channel2=c2,
-                           t(eval(my.ecall,parent.frame())),
-                           stringsAsFactors=FALSE))
-      }
-    }
-    rownames(res) <- NULL
-    return(res)
+        data.frame(channel1=.$channel1, channel2=.$channel2,
+                   t(eval(my.ecall,parent.frame())),
+                   stringsAsFactors=FALSE)
+    })
   }
 
   ## select spectra based on quantification level
@@ -1394,20 +1384,15 @@ summarize.ratios <-
 
     mean.r <- ifelse(is.null(ratiodistr),0,distr::q(ratiodistr)(0.5))
     if (summarize.method == "mult.pval") {
-      result <- ddply(ratios,by.column,function(ratios.subset) {
-
-        ldply(seq_len(nrow(classes)),function(class_i) {
-
-          class1 <- classes[class_i,1]
-          class2 <- classes[class_i,2]
+      summarize.f <- function(ratios.subset) {
+          class1 <- ratios.subset$class1[1]
+          class2 <- ratios.subset$class2[1]
 
           n.combination.c <- ifelse(is.matrix(n.combination),
                                     n.combination[class1,class2],
                                     n.combination)
 
-          ac.sel <- !is.na(ratios.subset$lratio) &
-                      ratios.subset$class1 == class1 &
-                      ratios.subset$class2 == class2
+          ac.sel <- !is.na(ratios.subset$lratio)
 
           if (!any(ac.sel)) { ## no data for AC and classes
             return(data.frame(lratio=NA,variance=NA,n.spectra=0,n.pos=0,n.neg=0,
@@ -1463,8 +1448,10 @@ summarize.ratios <-
                             p.value.rat=p.value.rat,p.value.sample=p.value.sample,p.value=p.value,
                             is.significant=is.significant,r1=class1,r2=class2,
                             class1=class1,class2=class2,stringsAsFactors=FALSE))
-        })
-      },.parallel=isTRUE(getOption('isobar.parallel')))
+      }
+      # FIXME parallelize (use multidplyr's partition?)
+      result <- group_by_(ratios, c("class1", "class2", by.column)) %>%
+        do({summarize.f(.)}) %>% dplyr::ungroup()
 
       if (is.null(result)) stop("Error summarizing.")
 

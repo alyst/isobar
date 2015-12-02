@@ -160,7 +160,7 @@ readProteinGroup2 <- function(id.file,...,identifications.format=NULL,
   if (max(table(identifications[[SC['SPECTRUM']]])) > 1) {
     if (SC['DISSOCMETHOD'] %in% colnames(identifications) &&
         length(unique(identifications[[SC['DISSOCMETHOD']]]))>1) {
-      identifications <- ddply(identifications,'dissoc.method',.merge.identifications)
+      identifications <- dplyr::group_by(identifications, dissoc.method) %>% dplyr::do({.merge.identifications(.)})
       identifications <- .merge.quant.identifications(identifications)
     } else {
       identifications <- .merge.identifications(identifications)
@@ -201,22 +201,13 @@ setMethod("ProteinGroup",signature(from="data.frame",template="missing",proteinI
      if (!.PEPTIDE.COLS['REALPEPTIDE'] %in% colnames(from))
        from <- .fix.il.peptide(from)
 
-      subset.s <- function(my.df,j) {
-        if (is(my.df,"data.table"))
-          my.df[,j,with=FALSE]
-        else
-          my.df[,j]
-      }
-
-      spectrumToPeptide <- .as.vect(unique(subset.s(from,c("spectrum","peptide"))))
+      spectrumToPeptide <- .as.vect(dplyr::select(from, spectrum, peptide) %>% dplyr::distinct())
       ##spectrumToPeptide <- setNames(from[["peptides"]],from[["spectrum"]])
 
-      spectrumId <- unique(subset.s(from,setdiff(colnames(from),c("protein","start.pos","aa.before","aa.after"))))
-      peptideInfo <- unique(subset.s(from,intersect(c("protein","peptide","start.pos","aa.before","aa.after","modif","real.peptide"),colnames(from))))
-      peptideInfo <- peptideInfo[order(peptideInfo[["protein"]],
-                                       peptideInfo[["start.pos"]],
-                                       peptideInfo[["peptide"]]),]
-      from <- unique(subset.s(from,c("protein","peptide")))
+      spectrumId <- distinct(select_(from, .dots=setdiff(colnames(from),c("protein","start.pos","aa.before","aa.after"))))
+      peptideInfo <- select_(from, .dots=intersect(c("protein","peptide","start.pos","aa.before","aa.after","modif","real.peptide"),colnames(from))) %>%
+        dplyr::distinct() %>% dplyr::arrange(protein, start.pos, peptide)
+      from <- distinct(select(from, protein, peptide))
 
       # use numbers to not exceed the maximum length
       from$peptn <- as.integer(as.factor(from[["peptide"]]))
@@ -235,9 +226,9 @@ setMethod("ProteinGroup",signature(from="data.frame",template="missing",proteinI
       f.peptides <- combn.peptides[ from$protein ]
       from$protein.g <- as.character(combn.proteins[ f.peptides ])
 
-      pep.n.prots <- unique(subset(from,,c("peptide","protein.g")))
-      all.protein.g <- table(pep.n.prots[['protein.g']])
-      prots.to.prot <- as.matrix(unique(subset.s(from,c("protein.g","protein"))))
+      pep.n.prots <- dplyr::select(from, peptide, protein.g) %>% dplyr::distinct()
+      all.protein.g <- table(pep.n.prots$protein.g)
+      prots.to.prot <- distinct(select(from, protein.g, protein))
       prots.group <- c()
 
       # GROUPING:
@@ -296,16 +287,14 @@ setMethod("ProteinGroup",signature(from="data.frame",template="missing",proteinI
       tmp <- merge(as.data.frame(pgt[["protein.group.table"]], stringsAsFactors=FALSE),
                    pep.n.prots, by.x="protein.g",by.y="protein.g")
 
-      peptideSpecificity <- .factor.as.character(ddply(tmp,"peptide",function(d) {
-        data.frame(specificity=
-                   ifelse(length(unique(d$protein.g))==1,REPORTERSPECIFIC,
-                          ifelse(length(unique(d$reporter.protein))==1,GROUPSPECIFIC,
-                                 UNSPECIFIC)),
-                   n.shared.proteins=length(unique(d$protein.g)),
-                   n.shared.groups=length(unique(d$reporter.protein)),
-                   stringsAsFactors=FALSE)
-      }
-      ))
+      peptideSpecificity <- .factor.as.character(dplyr::group_by(tmp, peptide) %>%
+        # FIXME? is n.shared correct or swapped?
+        dplyr::summarize(n.shared.groups=n_distinct(reporter.protein),
+                         n.shared.proteins=n_distinct(protein.g)) %>%
+        ungroup() %>%
+        dplyr::mutate(specificity=ifelse(n.shared.proteins==1, REPORTERSPECIFIC,
+                          ifelse(n.shared.groups==1, GROUPSPECIFIC,
+                                 UNSPECIFIC))))
 
       # isoforms (handled for Uniprot only, ATM)
       proteins <- as.character(sort(unique(prots.to.prot$protein)))
@@ -530,9 +519,9 @@ getProteinInfoFromEntrez <- function(x,splice.by=200) {
     res.l <- res.l[!sapply(res.l,is.null)]
 
     enames.to.isobar <- c(Gi="gi_accession",Caption="name",Title="protein_name")
-    res.df <- ldply(res.l, function(x) {
+    res.df <- rbind_all(lapply(res.l, function(x) {
                     setNames(x[names(enames.to.isobar)],enames.to.isobar)
-    })
+    }))
 
    protein.info <- rbind(protein.info,res.df)
     i <- i + splice.by
@@ -553,12 +542,11 @@ getProteinInfoFromNextProt <- function(x) {
   stop("NOT IMPLEMENTED YET")
 
   protein.acs <- x@isoformToGeneProduct[names(indistinguishableProteins(x)),]
-  protein.info  <- ddply(protein.acs,"proteinac.wo.splicevariant",
-                         function(y) {
-                         url <- sprintf("http://www.nextprot.org/rest/protein/NX_%s?format=json",
-                                        unique(y$proteinac.wo.splicevariant))
+  protein.info  <- dplyr::group_by(protein.acs, proteinac.wo.splicevariant) %>%
+    dplyr::summarize(url = sprintf("http://www.nextprot.org/rest/protein/NX_%s?format=json",
+                                   unique(proteinac.wo.splicevariant[1]))) %>%
                          # PARSE JSON, esp isoform sequences
-  })
+    dplyr::ungroup()
   attr(protein.info,"on.splice.variant") <- TRUE
   return(protein.info)
 }
@@ -602,7 +590,7 @@ getPtmInfoFromPhosphoSitePlus <- function(protein.group,file.name=NULL,modif="PH
                                                     SUMO="Sumoylation_site_dataset.gz",
                                                     UBI="Ubiquitination_site_dataset.gz")) {
   if (length(modif) > 1) {
-    return(do.call(rbind,lapply(modif,function(m) getPtmInfoFromPhosphoSitePlus(protein.group,file.name,m,psp.url,mapping))))
+    return(rbind_all(lapply(modif,function(m) getPtmInfoFromPhosphoSitePlus(protein.group,file.name,m,psp.url,mapping))))
   }
 
   if (is.null(file.name)) file.name <- mapping[modif]
@@ -678,19 +666,18 @@ getPtmInfoFromNextprot <- function(protein.group,
     warning("Could not fetch neXtProt results for some proteins:",
             " ",.abbrev(protein.acs[sel.length0],4,", "),".")
   nextprot.ptmInfo <- nextprot.ptmInfo[sapply(nextprot.ptmInfo,length)>0]
-  ptm.info <- ldply(nextprot.ptmInfo,
+  rbind_all(unlist(lapply(nextprot.ptmInfo,
                     function(x)
-                      ldply(x,function(y) {
+                      lapply(x,function(y) {
                             y[sapply(y,is.null)] <- NA
                             y$modification.name <- y$modification['name']
                             y$modification.accession <- y$modification['accession']
                             y$modification <- NULL
                             data.frame(y,stringsAsFactors=FALSE)
                       })
-                    )
-  ptm.info$isoform_ac <- sub("^NX_","",ptm.info$isoform_ac)
-  ptm.info$position <- ptm.info$first_position
-  ptm.info
+                    ), recursive=FALSE)) %>%
+        mutate(isoform_ac = sub("^NX_", "", isoform_ac),
+               position = first_position)
 }
 
 ### - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -734,29 +721,30 @@ proteinGroup.as.concise.data.frame <-
         ip.df <- merge(ip.df,from@isoformToGeneProduct,
                        by.x="protein",by.y="proteinac.w.splicevariant")
         pep.n.prot <- peptideNProtein(from)
-        in.df <- unique(ddply(ip.df, "protein.g",
-                        function(x)
-                          c(n.acs=length(unique(x[,"proteinac.wo.splicevariant"])),
-                            n.variants=length(unique(x[,"protein"])))))
+        in.df <- dplyr::group_by(ip.df, protein.g) %>%
+            dplyr::summarize(n.acs=n_distinct(proteinac.wo.splicevariant),
+                             n.variants=n_distinct(protein))
         pep.n.prot <- merge(pep.n.prot,ip.df)
         pep.n.prot <- merge(pep.n.prot,proteinGroupTable(from)[,c("protein.g","reporter.protein")])
-        res <- ddply(pep.n.prot,"peptide",
-                     function(x) {
-                       res <- data.frame(n.acs=length(unique(x[,"proteinac.wo.splicevariant"])),
-                                         n.variants=length(unique(x[,"protein"])))
-                       x <- unique(x[,c("reporter.protein","protein.g")])
-                       protein.gs <- unique(x[,'reporter.protein'])
-                       res <- cbind(proteins=paste(tapply(x$protein.g,factor(x$reporter.protein),
-                                                          paste,collapse=","),collapse=";"),
-                                    n.groups=length(protein.gs),
-                                    res,stringsAsFactors=FALSE)
-                       if (!is.null(attr(from,"protein.group.ids")))
-                         res  <- cbind(groups=paste(attr(from,"protein.group.ids")[protein.gs],collapse=","),
-                                       res,stringsAsFactors=FALSE)
-                       res
+        pep.n.prot$protein.group.id <- if (!is.null(attr(from,"protein.group.ids"))) {
+            attr(from,"protein.group.ids")[pep.n.prot$reporter.protein]
+        } else { NA }
 
-                     })
-        return(unique(res))
+        protein.agg <- dplyr::group_by(pep.n.prot, peptide, protein.g, protein.group.id) %>%
+                    dplyr::summarize(proteins=paste0(sort(unique(reporter.protein)), collapse=",")) %>%
+                    dplyr::group_by(peptide) %>%
+                    dplyr::summarize(proteins=paste0(sort(unique(proteins)), collapse=";"),
+                                     groups=paste0(sort(unique(protein.group.id)), collapse=","),
+                                     n.groups=n())
+
+        res <- dplyr::group_by(pep.n.prot, peptide) %>%
+            dplyr::summarize(n.acs=n_distinct(proteinac.wo.splicevariant),
+                             n.variants=n_distinct(protein)) %>%
+            ungroup() %>% inner_join(protein.agg)
+        if (all(is.na(res$groups))) {
+            res$groups <- NULL
+        }
+        return(res)
       }
 
 
@@ -776,19 +764,17 @@ proteinGroup.as.concise.data.frame <-
         ip.df <- merge(ip.df,proteinGroupTable(from)[,c("protein.g","reporter.protein")])
         ipp.df <- merge(ip.df,pep.n.prot)
 
-        in.df <- ddply(ipp.df, c("reporter.protein"),
-          function(x) {
-            # for each 'protein AC' (no splice variant), summarize the splice variants (eg P123-[1-3,5])
-            merged.splicevariants <- ddply(x,"proteinac.wo.splicevariant",.summarize.splice.variants,link.url=link.url)
+        splice.in.df <- dplyr::group_by(ipp.df, reporter.protein, proteinac.wo.splicevariant) %>%
+            dplyr::do({.summarize.splice.variants(., link.url=link.url)})
+        pepmod.in.df <- dplyr::group_by(ipp.df, reporter.protein, peptide, modif) %>%
+            dplyr::do({.summarize.pepmodif(., modif.pos=modif.pos, ptm.info=ptm.info, from=from)})
 
-            # for each modified peptide, get one record summarizing its information
-            merged.pepmodifs <- ddply(x,c("peptide","modif"),.summarize.pepmodif,modif.pos=modif.pos,ptm.info=ptm.info,from=from)
-
-            data.frame(proteinn=paste(merged.splicevariants$ac,collapse=","),
-                       link=merged.splicevariants$link[1],
-                       merged.pepmodifs,stringsAsFactors=FALSE)
-        })
-        merge(ip.df,in.df)
+        inner_join(ip.df,
+          dplyr::arrange(splice.in.df, reporter.protein,ac) %>%
+          dplyr::group_by(reporter.protein) %>%
+          summarize(proteinn=paste0(ac,collapse=","),
+                    link=link[1]) %>%
+          inner_join(pepmod.in.df))
   }
 
 
@@ -819,74 +805,75 @@ proteinGroup.as.concise.data.frame <-
         ip.df <- merge(ip.df,proteinGroupTable(from)[,c("protein.g","reporter.protein")],by="protein.g")
         ipp.df <- merge(ip.df,pep.n.prot)
 
-        in.df <- ddply(ipp.df, c("reporter.protein"),
-          function(x) {
-            ## for each 'protein AC' (no splice variant),
-            ##  summarize the splice variants (eg P123-[1-3,5])
-            merged.splicevariants <-
-              ddply(x,"proteinac.wo.splicevariant",
-                    .summarize.splice.variants,link.url=link.url)
-            # for each modified peptide, get one record summarizing its information
-            merged.pepmodifs <- ddply(x,c("peptide","modif"),.summarize.pepmodif,
-                                      modif.pos=modif.pos,ptm.info=ptm.info,from=from)
-            data.frame(proteinn=paste(merged.splicevariants[,'ac'],collapse=","),
-                       link=merged.splicevariants[1,'link'],
-                       merged.pepmodifs,stringsAsFactors=FALSE)
-        },.parallel=isTRUE(getOption('isobar.parallel')))
+        # TODO parallel=isTRUE(getOption('isobar.parallel')))
+        ## for each 'protein AC' (no splice variant),
+        ##  summarize the splice variants (eg P123-[1-3,5])
+        splice.in.df <- dplyr::group_by(ipp.df, reporter.protein, proteinac.wo.splicevariant) %>%
+            dplyr::do({.summarize.splice.variants(., link.url=link.url)})
+        # for each modified peptide, get one record summarizing its information
+        pepmod.in.df <- dplyr::group_by(ipp.df, reporter.protein, peptide, modif) %>%
+            dplyr::do({.summarize.pepmodif(., modif.pos=modif.pos, ptm.info=ptm.info, from=from)})
+        in.df <- inner_join(ip.df,
+            dplyr::arrange(splice.in.df, reporter.protein, ac) %>%
+            dplyr::group_by(reporter.protein) %>%
+            summarize(proteinn=paste0(ac,collapse=","),
+                      link=link[1]) %>%
+            inner_join(pepmod.in.df))
 
         cols <- c("proteinn","link","start.pos","real.peptide","modif","modif.pos","modif.comment")
         if (show.proteinInfo)
           pnd <- proteinNameAndDescription(from,ip.df$protein.g)
 
+        # TODO .parallel=isTRUE(getOption('isobar.parallel')))
+        report.f <- function(x) {
+          #protein.gs <- unique(x$reporter.protein)
+          protein.gs <- unique(x$protein.g)
+          x <- unique(x[,cols[cols %in% colnames(x)]])
 
-        my.res <-
-          ddply(merge(ip.df,in.df,by="reporter.protein"),c("peptide","modif"),
-                function(x) {
-                  #protein.gs <- unique(x$reporter.protein)
-                  protein.gs <- unique(x$protein.g)
-                  x <- unique(x[,cols[cols %in% colnames(x)]])
-
-                  res <- data.frame(start.pos=.unique.or.collapse(x$start.pos,";"),
-                                    proteins=paste(unique(x$proteinn),collapse=";"),
-                                    uniprot=paste0("@link=",x$link[1],"@x",collapse=";"),
-                                    stringsAsFactors=FALSE)
-
-                  ## n.acs=length(unique(x[,"proteinac.wo.splicevariant"])),
-                  ## n.variants=length(unique(x[,"protein"])),
-                  ## n.variants=length(protein.gs),
-
-                  if ('real.peptide' %in% colnames(x))
-                    res <-
-                      cbind(res,
-                            real.peptide=.unique.or.collapse(x$real.peptide,";"),
+          res <- data.frame(start.pos=.unique.or.collapse(x$start.pos,";"),
+                            proteins=paste(unique(x$proteinn),collapse=";"),
+                            uniprot=paste0("@link=",x$link[1],"@x",collapse=";"),
                             stringsAsFactors=FALSE)
 
-                  if (!is.null(modif.pos)) {
-                    null.comments <- x$modif.comment == ""
-                    res <- cbind(res,
-                                 modif.pos=ifelse(!any(x$modif.pos!=0),"",
-                                                  paste(x$modif.pos,collapse=";")),
-                                 comment=ifelse(all(null.comments),"",
-                                                paste(x$modif.comment[!null.comments],
-                                                collapse="\n")),
-                                 stringsAsFactors=FALSE)
-                  }
+          ## n.acs=n_distinct(x$proteinac.wo.splicevariant),
+          ## n.variants=n_distinct(x$protein),
+          ## n.variants=length(protein.gs),
 
-                  if (show.proteinInfo && nrow(pnd) > 0)
-                    res <- cbind(res,
-                                 lapply(pnd[ip.df$protein.g %in% protein.gs,],
-                                        .paste_unique,collapse=";"))
+          if ('real.peptide' %in% colnames(x))
+            res <-
+              cbind(res,
+                    real.peptide=.unique.or.collapse(x$real.peptide,";"),
+                    stringsAsFactors=FALSE)
 
-                  if (!is.null(attr(from,"from.ids")))
-                    res  <- cbind(groups=paste(attr(from,"from.ids")[protein.gs],
-                                               collapse=","),
-                                  res,stringsAsFactors=FALSE)
+          if (!is.null(modif.pos)) {
+            null.comments <- x$modif.comment == ""
+            res <- cbind(res,
+                         modif.pos=ifelse(!any(x$modif.pos!=0),"",
+                                          paste(x$modif.pos,collapse=";")),
+                         comment=ifelse(all(null.comments),"",
+                                        paste(x$modif.comment[!null.comments],
+                                        collapse="\n")),
+                         stringsAsFactors=FALSE)
+          }
 
-                  res
+          if (show.proteinInfo && nrow(pnd) > 0)
+            res <- cbind(res,
+                         lapply(pnd[ip.df$protein.g %in% protein.gs,],
+                                .paste_unique,collapse=";"))
 
-                },.parallel=isTRUE(getOption('isobar.parallel')))
+          if (!is.null(attr(from,"from.ids")))
+            res  <- cbind(groups=paste(attr(from,"from.ids")[protein.gs],
+                                       collapse=","),
+                          res,stringsAsFactors=FALSE)
 
-        # res[,'peptide'] <- .convertModifToPos(res[,'peptide'],res[,'modif'])
+          res
+        }
+
+        # FIXME parallelize (use multidplyr's partition?)
+        my.res <- inner_join(ip.df, in.df, by="reporter.protein") %>%
+            dplyr::group_by(peptide, modif) %>% dplyr::do({report.f(.)}) %>%
+            ungroup()
+        # res$peptide <- .convertModifToPos(res$peptide,res$modif)
         return(unique(my.res))
 }
 
@@ -902,8 +889,9 @@ proteinGroup.as.concise.data.frame <-
 }
 
 .summarize.splice.variants <- function(x,link.url) {
-  res <- c(ac=unique(x$proteinac.wo.splicevariant),
-           link=paste0(link.url,unique(x$proteinac.wo.splicevariant)))
+  res <- data.frame(ac=unique(x$proteinac.wo.splicevariant),
+                    stringsAsFactors=FALSE) %>%
+         mutate(link=paste0(link.url,ac))
   if (!all(is.na(x$splicevariant))) {
     if (length(unique(x$splicevariant))==1) { res$ac <- x$protein[1]
     } else { res$ac <- sprintf("%s-[%s]",res$ac,
@@ -919,10 +907,9 @@ proteinGroup.as.concise.data.frame <-
    modification.positions.foreach.protein <-
      .convertModifToPos(x$modif,modif.pos,collapse=NULL,simplify=FALSE,and.name=!is.null(names(modif.pos)))
 
-   modif.posi <- t(mapply(.get.modif.pos.for.ac,
-                          x$protein, x$splicevariant,
-                          modification.positions.foreach.protein, x$start.pos,
+   modif.posi <- t(mapply(.get.modif.pos.for.ac,x$protein,x$splicevariant,modification.positions.foreach.protein,x$start.pos,
                           MoreArgs=list(from=from,pepseq=pepseq,ptm.info=ptm.info)))
+
    my.gene <- sprintf("%s %s",modif.posi[,3],.string.number.ranges(modif.posi[,4]))
    if (is.na(modif.posi[1,1]) || all(modif.posi[,1]==modif.posi[1,1])) {
      my.modif.posi <- modif.posi[1,1]
@@ -1311,17 +1298,12 @@ get.pep.group <- function(x,protein) {
   proteins <- names(sort(t,decreasing=TRUE))
 
   # to which proteins are peptides assigned?
-  pep.groups <-
-    ddply(pp[pp[,'protein.g'] %in% proteins,],"peptide",
-          function(s) data.frame(peptide=unique(s$peptide),
-                                 protein.g=s['protein.g'],
-                                 group=paste(sort(unique(s$protein.g)),collapse="-"),
-                                 speci=speci[unique(s$peptide)],
-                                 stringsAsFactors=FALSE
-                                 )
-          )
-  pep.groups <- unique(pep.groups[,c("peptide","group","speci")])
-  pep.groups[order(pep.groups$speci,pep.groups$peptide),]
+  dplyr::filter(pp, protein.g %in% proteins) %>%
+    dplyr::group_by(peptide) %>%
+    dplyr::summarize(group=paste0(sort(unique(protein.g)),collapse="-")) %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(speci=speci[peptide]) %>%
+    dplyr::arrange(speci, peptide)
 }
 
 ## create a extended proteinGroup table
@@ -1411,7 +1393,7 @@ groupMemberPeptides <- function(x,reporter.protein.g,
 human.protein.names <- function(my.protein.info) {
   my.df <- my.protein.info[,c("accession","splicevariant","gene_name","protein_name")]
   my.df$gene_name <- sanitize(my.df$gene_name)
-  collapsed.splicevariant <- ddply(my.df,"accession",function(x) {
+  collapse.splicevar.f <- function(x) {
         only_one <- nrow(x) == 1
         if (!all(is.na(x$splicevariant)) & any(!is.na(x$splicevariant)))
           x$splicevariant[is.na(x$splicevariant)] <- 1
@@ -1433,11 +1415,11 @@ human.protein.names <- function(my.protein.info) {
           }
         }
         return(unique(x))
-    })
+    }
+    collapsed.splicevariant <- dplyr::group_by(my.df, accession) %>%
+        dplyr::do({collapse.splicevar.f(.)})
 
-    collapsed.gene_name <- ddply(
-          unique(collapsed.splicevariant[,c("gene_name","ac_link","ac_nolink","protein_name")]),
-          "gene_name",function(x) {
+    collapse.gene_name.f <- function(x) {
         if (is.na(x$gene_name[1]) || x$gene_name[1] == "") {
           x$name_nolink <- x$ac_nolink
         } else {
@@ -1447,7 +1429,10 @@ human.protein.names <- function(my.protein.info) {
           x$name_nolink <- sprintf("%s: %s",x$gene_name,x$protein_name)
         }
         return(unique(x))
-    })
+    }
+    collapsed.gene_name <- dplyr::select(collapsed.splicevariant, gene_name, ac_link, ac_nolink, protein_name) %>%
+          dplyr::distinct() %>% dplyr::group_by(gene_name) %>%
+          dplyr::do({collapse_gene_name.f(.)})
     return(collapsed.gene_name)
 }
 
@@ -1610,12 +1595,12 @@ calcPeptidePosition <- function(peptide.info,protein.info,calc.il.peptide) {
   }
   if (any(peptide.info$start.pos == -1,na.rm=TRUE)) {
     sel.bad <- !is.na(peptide.info$start.pos) & peptide.info$start.pos == -1
-    warning("Could not match ",length(unique(peptide.info$peptide[sel.bad])),
-            " peptides in ",length(unique(peptide.info$protein[sel.bad]))," proteins")
+    warning("Could not match ",n_distinct(peptide.info$peptide[sel.bad]),
+            " peptides in ",n_distinct(peptide.info$protein[sel.bad])," proteins")
     peptide.info[sel.bad,'start.pos'] <- NA
   }
 
-  peptide.info[order(peptide.info[,'protein'],peptide.info[,'start.pos'],peptide.info[,'peptide']),]
+  dplyr::arrange(peptide.info, protein, start.pos, peptide)
 }
 
 # TOFIX: proteinInfo does not contain splice information. With splice sequence, an accurate seqcov could be calculated
@@ -1843,13 +1828,12 @@ calculate.emPAI <- function(protein.group,protein.g=reporterProteins(protein.gro
   if (all(is.na(splice.df$splicevariant)))
     return(paste0(splice.df$proteinac.w.splicevariant, collapse=", "))
 
-  res <- ddply(splice.df,"proteinac.wo.splicevariant",function(y) {
-        if (nrow(y) == 1) return(y[,'proteinac.w.splicevariant'])
-        if (all(is.na(y$splicevariant))) return(y[1,'proteinac.w.splicevariant'])
-
-        return(sprintf("%s-[%s]",
-                       y[1,'proteinac.wo.splicevariant'],
-                       number.ranges(y[,'splicevariant'])))
-  })
-  return(as.character(paste0(res[,'V1'],collapse=", ")))
+  res <- dplyr::group_by(splice.df, proteinac.wo.splicevariant) %>%
+        summarize(splicevar=if (n()==1 || all(is.na(splicevariant))) {
+                            proteinac.w.splicevariant} else {
+                            sprintf("%s-[%s]",
+                                    proteinac.wo.splicevariant[1],
+                                    number.ranges(splicevariant))
+                            })
+  return (as.character(paste0(res$splicevar, collapse=", ")))
 }

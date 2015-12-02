@@ -134,7 +134,7 @@ calc.delta.score <- function(my.data) {
   my.data$n.pep <- 1
   my.data$n.loc <- 1
 
-  res <- ddply(my.data,"spectrum",function(x) {
+  spectrum.f <- function(x) {
     if (nrow(x) == 1) return(x);
     res <- x[which.max(x$score),,drop=FALSE]
     res$n.pep <- length(unique(x$peptide))
@@ -146,7 +146,8 @@ calc.delta.score <- function(my.data) {
     res$delta.score.pep <- res$score - x$score[which.max(x$score)] # calc delta score w/ max (same pep)
     res$n.loc <- nrow(x) + 1
     return(res)
-  })
+  }
+  res <- dplyr::group_by(y, spectrum) %>% dplyr::do(spectrum.f) %>% dplyr::ungroup()
 
   my.data <- merge(pep.n.prot,res,by="peptide",all.y=TRUE)
 
@@ -154,17 +155,17 @@ calc.delta.score <- function(my.data) {
 }
 
 calc.pep.delta.score <- function(y,spectrum.col='spectrum',score.col='score',peptide.col='peptide') {
-  y$delta.score <- y$score
-  y$delta.score.pep <- y$score
-  y$delta.score.notpep <- y$score
+  y <- mutate(y,
+              delta.score = score,
+              delta.score.pep = score,
+              delta.score.notpep = score,
+              n.pep = 1,
+              n.loc = 1)
 
-  y$n.pep <- 1
-  y$n.loc <- 1
-
-  ddply(y,"spectrum",function(x) {
+  spectrum.f <- function(x) {
     if (nrow(x) == 1) return(x);
     res <- x[which.max(x$score),,drop=FALSE]
-    res$n.pep <- length(unique(x[[peptide.col]]))
+    res$n.pep <- n_distinct(x[[peptide.col]])
     x <- x[-which.max(x$score),] # remove best hit from x
     res$delta.score <- res$score - x$score[which.max(x$score)] # calc delta score w/ max
     res$delta.score.pep <- res$delta.score
@@ -178,7 +179,9 @@ calc.pep.delta.score <- function(y,spectrum.col='spectrum',score.col='score',pep
       res$delta.score.notpep <- res$score - y$score[which.max(y$score)] # calc delta score w/ max (different pep)
     }
     return(res)
-  })
+  }
+
+  dplyr::group_by(y, spectrum) %>% dplyr::do(spectrum.f) %>% dplyr::ungroup()
 }
 
 
@@ -368,15 +371,16 @@ readPhosphoRSOutput <- function(phosphoRS.outfile,simplify=FALSE,pepmodif.sep="#
       res.s
   })
   if (simplify) {
-    res <- do.call(rbind,res)
-    res$pepscore <- as.numeric(res$pepscore)
-    res$pepprob <- as.numeric(res$pepprob)
+    res <- rbind_all(res) %>%
+      mutate(pepscore = as.numeric(pepscore),
+             pepprob = as.numeric(pepprob))
     rownames(res) <- NULL
   } else {
     names(res) <- sapply(xmlChildren(spectra),xmlGetAttr,"ID")
   }
   if(besthit.only & simplify) {
-    res <- ddply(res,'spectrum',function(d) d[which.max(d$pepprob),])
+    res <- dplyr::arrange(res, spectrum, desc(pepprob)) %>%
+           dplyr::group_by(spectrum) %>% dplyr::slice(1:1) %>% ungroup()
     rownames(res) <- res$spectrum
   }
   res
@@ -558,11 +562,12 @@ getPeptideModifContext <- function(protein.group,modif,n.aa.up=7,n.aa.down=7) {
     peptide.info$real.peptide)
 
   # get pep-modif context
-  context.df <- unique(data.frame(peptide=peptide.info[,'peptide'],modif=peptide.info[,'modif'],context=pep.modif.context,stringsAsFactors=FALSE))
-  ddply(context.df,
-        c("peptide","modif"),
-        function(x) 
-          data.frame(peptide=x[1,'peptide'],modif=x[1,'modif'],
-                     context=paste(x[,'context'],collapse=";"),stringsAsFactors=FALSE))
+  data.frame(peptide=peptide.info$peptide,
+             modif=peptide.info$modif,
+             context=pep.modif.context,
+             stringsAsFactors=FALSE) %>%
+  dplyr::distinct() %>%
+  dplyr::group_by(peptide, modif) %>%
+    dplyr::summarize(context=paste0(context, collapse=";")) %>% ungroup()
 
 }

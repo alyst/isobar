@@ -1,10 +1,10 @@
 # IMPORT
 import("methods")
-importClassesFrom(Biobase, AnnotatedDataFrame, AssayData, eSet, 
+importClassesFrom(Biobase, AnnotatedDataFrame, AssayData, eSet,
                   Versioned, VersionedBiobase, Versions)
 
 import("distr")
-import("plyr")
+import("dplyr")
 
 # EXPORT
 exportClasses(IBSpectra,ProteinGroup)

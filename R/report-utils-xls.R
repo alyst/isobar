@@ -72,9 +72,10 @@ write.xls.report <- function(properties.env,report.env,file="isobar-analysis.xls
     }
 
     # TODO: add some info on number of quantified proteins
-    # n.quant.sign <- ddply(quant.tbl,c("class1","class2"),function(x) sum(!is.na(x[["lratio"]]) & x[["is.significant"]]))
-    # n.quant <- ddply(quant.tbl,c("class1","class2"),function(x) sum(!is.na(x[["lratio"]])))
-    # n.noquant <- ddply(quant.tbl,c("class1","class2"),function(x) sum(is.na(x[["lratio"]])))
+    # n.quant.stats <- dplyr::group_by(quant.tbl, class1, class2) %>%
+    #   summarize(n_quant_sign = sum(!is.na(lratio) & is.significant),
+    #             n_quant = sum(!is.na(lratio)),
+    #             n_noquant = sum(is.na(lratio)))
 
     ## write tables to tab seperated files files:
     protein.quant.f <- paste(get.property('cachedir'),"protein_quant.csv",sep="/")
@@ -336,7 +337,8 @@ write.xls.report <- function(properties.env,report.env,file="isobar-analysis.xls
   if ("METH" %in% ptm) my.ptm="Methylation"
 
   input.tbl$ac  <- NULL
-  pnp <- ddply(pnp,'peptide',function(x) c(peptide=x[1,'peptide'],ac=paste(x[,'protein.g'],collapse=";")))
+  pnp <- dplyr::group_by(pnp, peptide) %>%
+    dplyr::summarize(ac=paste0(sort(protein.g), collapse=";")) %>% ungroup()
 
   input.tbl <- merge(pnp,input.tbl,by="peptide")
   input.tbl[["i"]]  <- seq_len(nrow(input.tbl))
@@ -428,20 +430,25 @@ write.xls.report <- function(properties.env,report.env,file="isobar-analysis.xls
                              splice.df$proteinac.wo.splicevariant %in% names(protein.lengths),]
 
       # only keep first AC
-      splice.df.1 <- ddply(splice.df,'proteinac.wo.splicevariant',function(x) x[1,])
+      splice.df.1 <- dplyr::group_by(splice.df, proteinac.wo.splicevariant) %>% dplyr::slice(1:1) %>% dplyr::ungroup()
       peptide.info <- merge(peptide.info,splice.df.1,by.x='protein',by.y='proteinac.w.splicevariant')
       peptide.info$protein <- peptide.info$proteinac.wo.splicevariant
     }
 
-    seq.covs <- ddply(peptide.info,"protein",function(x) {
-      protein.length <- protein.lengths[x[1,'protein']]
-      if (is.na(protein.length)) return(c(seq.cov=NA))
-      x <- x[x[,'end.pos'] <= protein.length,]
-      if (nrow(x) == 0) return(c(seq.cov=NA))
-      seqq <- rep(FALSE,protein.length);
-      for (i in seq_along(nrow(x))) seqq[x[i,'start.pos']:x[i,'end.pos']] <-  TRUE
-      return(c(seq.cov=sum(seqq)/length(seqq)))
-    },.parallel=isTRUE(options('isobar.parallel')))
+    # TODO parallelize (using multidplyr's partition?)
+    protein_seqcov.f <- function(x) {
+      protein.length <- protein.lengths[x$protein[1]]
+      if (is.na(protein.length)) return(data.frame(seq.cov=NA,
+                                                   stringsAsFactors=FALSE))
+      x <- x[x$end.pos <= protein.length,]
+      if (nrow(x) == 0) return(data.frame(seq.cov=NA,
+                                                   stringsAsFactors=FALSE))
+      seqq <- rep.int(FALSE,protein.length)
+      for (i in seq_along(nrow(x))) seqq[(x$start.pos[i]):(x$end.pos[i])] <- TRUE
+      return(data.frame(seq.cov=sum(seqq)/length(seqq),
+                        stringsAsFactors=FALSE))
+    }
+    seq.covs <- dplyr::group_by(peptide.info, protein) %>% dplyr::do({protein_seqcov.f(.)})
 
     if (!proteinInfoIsOnSpliceVariants(proteinInfo(protein.group))) {
       seq.covs <- merge(seq.covs,splice.df,by.x='protein',by.y='proteinac.wo.splicevariant')

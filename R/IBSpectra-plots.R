@@ -47,14 +47,13 @@ setMethod("reporterMassPrecision", signature=c(x="IBSpectra",plot="logical"),
               .gg_theme(legend.position="none",
                    axis.text.x = .gg_element_text(angle=330,hjust=0,vjust=1,colour="grey50",size=7))
       } else {
-        res <- ddply(melt.masses,'reporter',function(x) {
-          c('true reporter mass'=x$reporter.tag.mass[1],
-            'number of spectra'=sum(!is.na(x$observed.moz)),
-            'mean of observed m/z'=mean(x$observed.moz,na.rm=TRUE),
-            'sd of obseved m/z'=sd(x$observed.moz,na.rm=TRUE),
-            'mean of mass difference * 10^3'=mean(x$mass.difference*10^3,na.rm=TRUE),
-            'sd of mass difference * 10^3'=sd(x$mass.difference,na.rm=TRUE))
-        })
+        res <- dplyr::group_by(melt.masses, reporter) %>%
+          summarize(`true reporter mass`=reporter.tag.mass[1],
+                    `number of spectra`=sum(!is.na(observed.moz)),
+                    `mean of observed m/z`=mean(observed.moz,na.rm=TRUE),
+                    `sd of obseved m/z`=sd(observed.moz,na.rm=TRUE),
+                    `mean of mass difference * 10^3`=mean(mass.difference*10^3,na.rm=TRUE),
+                    `sd of mass difference * 10^3`=sd(mass.difference,na.rm=TRUE))
         rownames(res) <- res$reporter
         res$reporter <- NULL
         res

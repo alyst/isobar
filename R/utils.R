@@ -171,8 +171,13 @@ number.ranges <- function(numbers) {
   mat
 }
 
+# convert matrix/dataframe into named vector
 .as.vect <- function(my.matrix,col.data=2,col.names=1) {
-  setNames(my.matrix[,col.data],my.matrix[,col.names])
+  if (is.data.frame(my.matrix)) {
+    setNames(my.matrix[[col.data]], my.matrix[[col.names]])
+  } else {
+    setNames(my.matrix[,col.data],my.matrix[,col.names])
+  }
 }
 
 .stopifnot <- function(cond,...) if (!cond) stop(...)
@@ -353,4 +358,10 @@ number.ranges <- function(numbers) {
      }))[l.peptide]
    }
    return(from)
+}
+
+# lapply that is parallelized if isobar.cluster exists
+.lapply <- function(...) {
+    cl = getOption("isobar.cluster", NULL)
+    if (!is.null(cl)) parLapply(cl=cl, ...) else lapply(...)
 }

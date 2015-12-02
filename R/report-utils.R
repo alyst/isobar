@@ -659,10 +659,10 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
         paste(sort(unique(protein.info[protein.info[["accession"]] %in% acs,"gene_name"])),
               collapse=", ")
       })
-      sort.genenames <- quant.tbl[,"gene_names"]
-      sort.genenames[sort.genenames==""] <- quant.tbl[sort.genenames=="","ac"]
-      quant.tbl <- quant.tbl[order(sort.genenames,quant.tbl$r1, quant.tbl$r2),]
-      quant.tbl$group <- as.numeric(factor(quant.tbl$ac,levels=unique(quant.tbl$ac)))
+      quant.tbl <- quant.tbl %>%
+            mutate(sort_genenames = ifelse(gene_names!="",gene_names,ac),
+                   group = as.numeric(factor(quant.tbl$ac, levels=unique(quant.tbl$ac)))) %>%
+            dplyr::arrange(sort_genenames, r1, r2)
     }
 
     if (all(is.na(quant.tbl$lratio)))
@@ -678,8 +678,7 @@ property <- function(x, envir, null.ok=TRUE,class=NULL) {
 
     protein.groupnames <-unique(env[["quant.tbl"]]$ac)
     ## if (is.null(protein.info)) { stop("protein info is null!")}
-    my.protein.infos <- llply(protein.groupnames, .do.create.protein.info, protein.group=proteinGroup(env[["ibspectra"]]),
-                              .parallel=isTRUE(getOption('isobar.parallel')))
+    my.protein.infos <- .lapply(protein.groupnames, .do.create.protein.info, protein.group=proteinGroup(env[["ibspectra"]]))
     #my.protein.infos <- lapply(protein.groupnames, .do.create.protein.info, protein.group=protein.group)
     names(my.protein.infos) <- protein.groupnames
     return(my.protein.infos)

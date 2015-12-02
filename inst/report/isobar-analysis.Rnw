@@ -7,6 +7,7 @@
 options(SweaveHooks=list(fig=function()
          par(mar=c(5.1, 4.1, 1.1, 2.1))))
 suppressPackageStartupMessages(library(isobar))
+suppressPackageStartupMessages(library(dplyr))
 options(encoding="UTF-8")
 
 load.tex.properties(.GlobalEnv) # loads environments
@@ -167,12 +168,12 @@ cat("\\normalsize\n")
 }
 
 <<not.quantified,echo=FALSE,results=tex>>=
-tt <- table(quant.tbl[is.na(quant.tbl[["lratio"]]),"ac"])
+tt <- table(quant.tbl$ac[is.na(quant.tbl[["lratio"]])])
 proteins.notquantified <- names(tt)[tt==ncol(cmbn)]
 
 if (length(proteins.notquantified) > 0) {
 cat("\\subsection{Not Quantified Proteins}\n")
-n.quant <- ddply(quant.tbl,c("class1","class2"),function(x) sum(is.na(x[["lratio"]])))
+n.quant <- dplyr::group_by(quant.tbl, class1, class2) %>% summarize(n_na = sum(is.na(lratio)))
 cat("\\secsubtitle{Number of identified but not quantified proteins: ",
     get_n_proteins(quant.tbl,is.na=TRUE),"}\\vspace{.5cm}")
 
@@ -195,9 +196,9 @@ if (properties.env[["show.protein.details"]]) {
 message("Writing protein group details ")
 print_protein_grp_info()
 
-proteins.n.group <- unique(quant.tbl[,c('ac','group')])
-proteins <- proteins.n.group[order(proteins.n.group[["group"]]),"ac"]
-print_protein_grp_tbl("protein-groups.tex",proteins,protein.group)
+proteins.n.group <- dplyr::select(quant.tbl, ac, group) %>% dplyr::distinct() %>%
+                    dplyr::arrange(group)
+print_protein_grp_tbl("protein-groups.tex",proteins.n.group$ac,protein.group)
 
 cat("\\small\n")
 cat("\\LTXtable{\\textwidth}{protein-groups.tex}\n")

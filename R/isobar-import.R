@@ -45,7 +45,7 @@
     if (!all(cols %in% colnames(identifications)))
       stop(" Quantitative information missing: Supply columns '",paste(cols,collapse="', '"),"'.")
     qdata <- unique(identifications[,c(.SPECTRUM.COLS['SPECTRUM'],cols)])
-    identifications <<- identifications[,-which(colnames(identifications) %in% cols)]
+    identifications <- dplyr::select(identifications, -one_of(cols))
     rownames(qdata) <- qdata[[.SPECTRUM.COLS['SPECTRUM']]]
     qdata <- as.matrix(qdata[,-1])
     colnames(qdata) <- reporterTagNames
@@ -204,14 +204,14 @@
 
   if ('SEARCHENGINE' %in% names(SC)) {
     message("  Identification details:")
-    tt <- sort(table(identifications[[SC['SEARCHENGINE']]]))
-    stats <- data.frame(perc=sprintf("%.2f %%",tt/sum(tt)*100),n=tt)
+    stats <- dplyr::group_by_(identifications, SC['SEARCHENGINE']) %>%
+        summarize(n = n(),
+                  perc=sprintf("%.2f %%",n()/nrow(identifications)*100))
     if ('SCORE' %in% names(SC)) {
-      scores <- identifications[[SC['SCORE']]]
-      score.stats <- do.call(rbind,lapply(names(tt),function (se) {
-        my.scores <- scores[identifications[[SC['SEARCHENGINE']]]==se]
-        summary(my.scores,na.rm=TRUE)}))
-      stats <- cbind(stats,score.stats)
+      score.stats <- dplyr::group_by_(identifications, SC['SEARCHENGINE']) %>%
+        dplyr::do({summary(.[[SC['SCORE']]], na.rm=TRUE) %>% as.matrix() %>%
+                   t() %>% as.data.frame()})
+      stats <- inner_join(stats, score.stats)
     }
     print(stats)
 
@@ -234,11 +234,10 @@
   ## Merge identifications
   if (max(table(identifications[[SC['SPECTRUM']]])) > 1) {
     if (SC['DISSOCMETHOD'] %in% colnames(identifications) &&
-        length(unique(identifications[[SC['DISSOCMETHOD']]]))) {
-      identifications <- dlply(identifications,'dissoc.method',.merge.identifications,...)
-      # rbind separately to assure equal column names
-      identifications <- do.call(rbind,identifications)
-      identifications <- .merge.quant.identifications(identifications)
+        n_distinct(identifications[[SC['DISSOCMETHOD']]])) {
+      identifications <- dplyr::group_by(identifications, dissoc.method) %>%
+        dplyr::do({.merge.identifications(., ...)}) %>% dplyr::ungroup() %>%
+        .merge.quant.identifications()
     } else {
       identifications <- .merge.identifications(identifications, ...)
     }
@@ -274,19 +273,19 @@ setMethod("initialize","IBSpectra",
   PC <- unique(c(.SPECTRUM.COLS['PEPTIDE'],.PROTEIN.COLS,.PEPTIDE.COLS))
   protein.colnames <- colnames(identifications)[colnames(identifications) %in% c(PC)]
   pept.n.prot <- unique(identifications[,protein.colnames])
-  identifications <- unique(identifications[,-which(colnames(identifications) %in% setdiff(PC,.SPECTRUM.COLS['PEPTIDE']))])
+  identifications <- dplyr::select(identifications, -one_of(setdiff(PC,.SPECTRUM.COLS['PEPTIDE']))) %>% dplyr::distinct()
   ## Merge identifications
   if (max(table(identifications[[SC['SPECTRUM']]])) > 1) {
-    message("merging identifications")
+    message("merging identifications ...", appendLF=FALSE)
     if (SC['DISSOCMETHOD'] %in% colnames(identifications) &&
-        length(unique(identifications[[SC['DISSOCMETHOD']]]))) {
-      identifications <- dlply(identifications,'dissoc.method',.merge.identifications,...)
-      # rbind separately to assure equal column names
-      identifications <- do.call(rbind,identifications)
-      identifications <- .merge.quant.identifications(identifications)
+        n_distinct(identifications[[SC['DISSOCMETHOD']]])) {
+      identifications <- dplyr::group_by(identifications, dissoc.method) %>%
+        dplyr::do({.merge.identifications(.,...)}) %>% dplyr::ungroup() %>%
+        .merge.quant.identifications()
     } else {
       identifications <- .merge.identifications(identifications, ...)
     }
+    message(" done")
   }
   identifications <- .remove.duplications(identifications)
 
@@ -316,7 +315,7 @@ setMethod("initialize","IBSpectra",
     identifications[,.SPECTRUM.COLS['USEFORQUANT']] <- TRUE
   }
 
-  fdata <- identifications[,colnames(identifications) %in% .SPECTRUM.COLS]
+  fdata <- as.data.frame(identifications[,colnames(identifications) %in% .SPECTRUM.COLS])
   rownames(fdata) <- fdata[['spectrum']]
   featureData <- new("AnnotatedDataFrame",data=fdata,
                      varMetadata=.get.varMetaData(fdata))
@@ -507,13 +506,17 @@ setMethod("readIBSpectra",
   #                      "\tx ... identified spectra\n",
   #                      "\ty ... mapped spectra\n")
 
-  spectra.map <- .as.vect(mapping.quant2id,1,2)
+  spectra.map <- data.frame(spectrum.quant=spectrumtitles,
+                       title_ix=seq_along(spectrumtitles),
+                       stringsAsFactors=FALSE) %>%
+    left_join(mapping.quant2id) %>%
+    dplyr::arrange(title_ix)
   .stopiflengthnotequal(spectrumtitles,
-                        spectra.map[spectrumtitles],
-                        "not all spectra could be matched!\n",
+                        spectra.map$spectrum,
+                        "ambiguous quantitation to identification spectra matches detected!\n",
                         "\tx ... spectra with quant info\n",
                         "\ty ... identified spectra\n")
-  spectra.map[spectrumtitles]
+  spectra.map$spectrum
 }
 
 .get.dupl.n.warn <- function(df,col,msg="ibspectra",write.to=NULL,f=warning) {
@@ -781,7 +784,7 @@ read.mzid <- function(filename) {
     all.spectra <- split(all.spectra,col(all.spectra))
 
   ## extract information from each spectrum
-  result <- llply(all.spectra,function(x) {
+  result <- .lapply(all.spectra, function(x) {
     header <- .strsplit_vector(x[grep("^[A-Z]",x)],"=")
     numbers <- do.call(rbind,strsplit(x[grep("^1..\\.",x)],"\\s"))
     mzi.mass <- as.numeric(numbers[,1])
@@ -812,7 +815,7 @@ read.mzid <- function(filename) {
       rr <- c(rr,rep(NA,nReporter*2))
     }
     return(rr)
-  },.parallel=isTRUE(getOption('isobar.parallel')))
+  })
 
   result <- do.call(rbind,result)
 
@@ -926,7 +929,7 @@ read.mzid <- function(filename) {
                                                 "]")),collapse="\n"))
       all.id.colnames <- unique(unlist(id.colnames))
       if (isTRUE(all.cols)) {
-        id.data <- do.call(rbind,lapply(id.data,function(i.d) {
+        id.data <- rbind_all(lapply(id.data,function(i.d) {
           id.d[,all.id.colnames[!all.id.colnames %in% colnames(id.d)]] <- NA
           id.d[,all.id.colnames]
         }))
@@ -936,10 +939,10 @@ read.mzid <- function(filename) {
           intersect.colnames <- intersect(intersect.colnames,id.colnames[[s.i]])
         }
         message(" taking intersection: ",paste(intersect.colnames,collapse="; "))
-        id.data <- do.call(rbind,lapply(id.data,function(i.d) i.d[,intersect.colnames]))
+        id.data <- rbind_all(lapply(id.data,function(i.d) i.d[,intersect.colnames]))
       }
     } else {
-        id.data <- do.call(rbind,id.data)
+        id.data <- rbind_all(id.data)
     }
   }
 
@@ -961,7 +964,7 @@ read.mzid <- function(filename) {
 
   if (trim.titles)
     id.data[,.SPECTRUM.COLS['SPECTRUM']] <- .trim(id.data[[.SPECTRUM.COLS['SPECTRUM']]])
-  return(id.data)
+  return(as.data.frame(id.data))
 }
 
 .read.rockerbox <- function(filename) {
@@ -976,13 +979,14 @@ read.mzid <- function(filename) {
   ## transform 'all.peptide.matches' to ac and start.pos
   split.acs <- strsplit(data.r$all.protein.matches,"; ")
   names(split.acs) <- data.r$all.protein.matches
-  ac.n.startpos <- ldply(split.acs,function(x) {
+  # TODO might be faster if dataframe constructed once
+  ac.n.startpos <- rbind_all(lapply(split.acs,function(x) {
     y <- do.call(rbind,strsplit(x,split="\\[|\\]"))
     start.pos <- sapply(strsplit(y[,2],"-",fixed=TRUE),
                         function(z) if(all(!is.na(as.numeric(z))) && length(z) == 2) as.numeric(z[1])
                         else stop("not numeric"))
     data.frame(accession=y[,1],start.pos=start.pos)
-  })
+  }))
   data.r <- merge(data.r,ac.n.startpos,by.x="all.protein.matches",by.y=".id")
   data.r$all.protein.matches <- NULL
   ## end transform
@@ -1029,10 +1033,10 @@ read.mzid <- function(filename) {
     id.good <- identifications[identifications$spectrum %in% names(tt)[tt==1],]
     id.bad <- identifications[identifications$spectrum %in% names(tt)[tt>1],]
     id.bad$n.se <- rowSums(!is.na(id.bad[,score.columns]))
-    id.bad <- ddply(id.bad,'spectrum',function(x) {
-      x[which.max(x$n.se),]
-    })
-    id.bad$n.se <- NULL
+    id.bad <- id.bad %>% dplyr::arrange(spectrum, desc(n.se)) %>%
+      dplyr::group_by(spectrum) %>%
+      dplyr::slice(1:1) %>% # select the first row with most scores
+      dplyr::ungroup() %>% dplyr::mutate(n.se = NULL)
     identifications <- rbind(id.good,id.bad)
   }
 
@@ -1158,7 +1162,7 @@ read.mzid <- function(filename) {
 
 .do.resolve.conflicts <- function(ids, colname, resolve.colnames, resolve.f) {
   if (length(ids) == 0)
-    return(NULL)
+    return(data.frame())
   if (length(ids) == 1)
     return(ids)
 
@@ -1167,7 +1171,7 @@ read.mzid <- function(filename) {
     message("removing ",sum(is.na(ids[[colname]])))
   ids <- ids[!is.na(ids[[colname]]),]
   if (nrow(ids) == 0)
-	  return(NULL)
+	  return(data.frame())
 
   ids[,.SPECTRUM.COLS['NOTES']] <- ifelse(ids[[.SPECTRUM.COLS['NOTES']]] == '','',
 					  paste0(ids[[.SPECTRUM.COLS['NOTES']]],"\n"))
@@ -1185,9 +1189,8 @@ read.mzid <- function(filename) {
   if (is.character(modif.cols))
     modif.cols <- which(colnames(df) %in% modif.cols)
 
-  adply(df, 1, function(x) {
+  resolve.modif.f <- function(x) {
 
-    x <- as.data.frame(x)
     modifs <- unlist(x[,modif.cols])
     modifs <- modifs[!is.na(modifs)]
     if (length(modifs) == 0) {
@@ -1218,7 +1221,8 @@ read.mzid <- function(filename) {
     x[,colname] <- modifs[1]
     x[,'note'] <- note
     return(x)
-  })
+  }
+  as.data.frame(df) %>% rowwise() %>% dplyr::do({resolve.modif.f(.)}) %>% ungroup()
 }
 
 .max.uniq <- function(tt) sum(tt==max(tt)) == 1
@@ -1232,7 +1236,7 @@ read.mzid <- function(filename) {
   n.max.ids <- 0
   n.modif.pos.dif <- 0
 
-  resolved.identifications <- ddply(identifications,'spectrum', function(x) {
+  resolve.diff_ident.f <- function(x) {
 	n.ids <- rowSums(!is.na(x[,score.cols]),na.rm=TRUE)    ## number of identifications for each psm
 	if (.max.uniq(n.ids)) {
 	  n.max.ids <<- n.max.ids + 1
@@ -1246,7 +1250,7 @@ read.mzid <- function(filename) {
 	    x <- x[x[['peptide']] == .take.max(pep.ids),,drop=FALSE]
 	  }  else {
 	    n.skipped <<- n.skipped + 1
-	    return(NULL)
+	    return(data.frame())
 	  }
 	}
 
@@ -1267,7 +1271,7 @@ read.mzid <- function(filename) {
 	    n.modif.pos.dif <<- n.modif.pos.dif + 1
 
 	  #print(x)
-	  modif <- paste(x[,.SPECTRUM.COLS['SEARCHENGINE']],x[,'modif'],sep=": ",collapse=' & ')
+	  modif <- paste0(x[[.SPECTRUM.COLS['SEARCHENGINE']]],": ",x[['modif']], collapse=' & ')
 	  x <- x[x[['modif']] == .take.max(modif.ids)[1],,drop=FALSE]
 	  x[,'modif'] <- modif
 	} else if (!allequal(x[['charge']])) {         ## different charge
@@ -1281,8 +1285,11 @@ read.mzid <- function(filename) {
 	}
 
 	return(x)
-  })
-  message(" resolving differing ",length(unique(identifications[['spectrum']]))," identifications: " )
+  }
+  resolved.identifications <- dplyr::group_by(identifications, spectrum) %>%
+    dplyr::do({resolve.diff_ident.f(.)}) %>% ungroup()
+
+  message(" resolving differing ",n_distinct(identifications[['spectrum']])," identifications: " )
   message("   ",n.max.ids," resolved because more evidence was available for one alternative")
   message("   ",n.skipped," removed because of differing peptide ids")
   message("   ",n.modif.pos.dif," kept, as only the modification position was different")
@@ -1292,42 +1299,54 @@ read.mzid <- function(filename) {
 .merge.quant.identifications <- function(identifications) {
   SC <- .SPECTRUM.COLS[.SPECTRUM.COLS %in% colnames(identifications)]
 
-  tt <- table(identifications[,SC['SPECTRUM.QUANT']])
-  spectra.ok <- identifications[,SC['SPECTRUM.QUANT']] %in% names(tt)[tt==1]
+  score.colnames <- .SPECTRUM.COLS[c('SCORE.MASCOT','SCORE.PHENYX','SCORE.MSGF','PROB.PHOSPHORS')]
+  score.colnames <- score.colnames[score.colnames %in% colnames(identifications)]
+  merged_score.cols <- score.colnames[score.colnames != 'pepprob']
+  names(merged_score.cols) <- NULL # remove names to avoid renaming in mutate_each_()
 
-  SC <- .SPECTRUM.COLS[.SPECTRUM.COLS %in% colnames(identifications)]
-  score.colname <- .SPECTRUM.COLS[c('SCORE.MASCOT','SCORE.PHENYX','SCORE.MSGF','PROB.PHOSPHORS')]
-  score.colname <- score.colname[score.colname %in% colnames(identifications)]
+  ids.quant.grouped <- dplyr::group_by_(identifications,
+                                       .SPECTRUM.COLS['SPECTRUM.QUANT'])
 
-  message("Merging ",sum(!spectra.ok)," identifications from different dissociation methods.")
-  ids.quant.merged <- ddply(identifications[!spectra.ok,],.SPECTRUM.COLS['SPECTRUM.QUANT'],function(x) {
-      if (nrow(x) == 1) return(x)
+  message("Merging ",sum(group_size(ids.quant.grouped)>1),
+          " identifications from different dissociation methods.")
+  collapse_scores.f <- function(scores) gsub("NA","",paste0(as.character(scores),collapse="&"))
+  merge_quant.f <- function(x) {
+    if (nrow(x) == 1) stop("Cannot merge single identification")
 
-      my.args <- as.list(x[,score.colname,drop=FALSE])
-      my.args <- lapply(my.args,round,digits=2) ## take two significant digits before taking next score into account as top hitter
-      my.args$decreasing=TRUE
+    # dismiss peptide-spectrum matches which are different between search engines
+    if (!all(x[[SC['PEPTIDE']]] == x[[SC['PEPTIDE']]][1]))
+      return(data.frame())
 
-      max.hit <- do.call(order,my.args)[1]
+    my.args <- as.list(x[,score.colnames,drop=FALSE])
+    my.args <- lapply(my.args,round,digits=2) ## take two significant digits before taking next score into account as top hitter
+    my.args$decreasing=TRUE
 
-      # dismiss peptide-spectrum matches which are different between search engines
-      if (!all(x[,SC['PEPTIDE']] == x[1,SC['PEPTIDE']]))
-        return(NULL)
+    max.hit <- do.call(order,my.args)[1]
 
-      x[max.hit,SC['DISSOCMETHOD']] = paste0("[",x[max.hit,SC['DISSOCMETHOD']],"]")
-      if (all(x[,SC['MODIFSTRING']] == x[max.hit,SC['MODIFSTRING']]) && 'DISSOCMETHOD' %in% names(SC)) {
-      if ("cid" %in% x[,SC['DISSOCMETHOD']])
-      x[max.hit,SC['SPECTRUM']] <- x[x[,SC['DISSOCMETHOD']]=="cid",SC['SPECTRUM']][1]
+    x[max.hit,SC['DISSOCMETHOD']] <- paste0("[",x[[SC['DISSOCMETHOD']]][max.hit],"]") # mark the dissoc method of max.hit
+    if (all(x[[SC['MODIFSTRING']]] == x[[SC['MODIFSTRING']]][max.hit]) && 'DISSOCMETHOD' %in% names(SC)) {
+      # use identification from CID (FIXME what's with max.hit that now should be [cid]?)
+      if ("cid" %in% x[[SC['DISSOCMETHOD']]])
+        x[max.hit,SC['SPECTRUM']] <- (x[[SC['SPECTRUM']]][x[[SC['DISSOCMETHOD']]]=="cid"])[1]
 
-      x[max.hit,SC['DISSOCMETHOD']] <- paste(x[,SC['DISSOCMETHOD']],collapse="&")
-      for (sc in score.colname[score.colname != 'pepprob'])
-        x[max.hit,sc] <- gsub("NA","",paste(x[,sc],collapse="&"))
-      }
-      return(x[max.hit,,drop=FALSE])
-  })
+      x[max.hit,SC['DISSOCMETHOD']] <- paste(x[[SC['DISSOCMETHOD']]],collapse="&")
+      dplyr::mutate_each_(x[max.hit,,drop=FALSE],
+                          funs(collapse_scores.f), merged_score.cols)
+    } else {
+      dplyr::mutate_each_(x[max.hit,,drop=FALSE],
+                          funs(as.character), merged_score.cols)
+    }
+  }
+  ids.quant.merged <- ids.quant.grouped %>%
+                      dplyr::filter(n()>1) %>%
+                      dplyr::do({merge_quant.f(.)}) %>%
+                      dplyr::ungroup()
 
   colnames(ids.quant.merged)[colnames(ids.quant.merged)=='SPECTRUM.QUANT'] <- 'spectrum.quant'
   ids.quant.merged <- ids.quant.merged[,colnames(identifications)]
-  rbind(identifications[spectra.ok,],ids.quant.merged)
+  rbind(dplyr::filter(ids.quant.grouped, n()==1) %>% dplyr::ungroup() %>%
+        dplyr::mutate_each_(funs(as.character), merged_score.cols),
+        ids.quant.merged)
 }
 
 .merge.identifications <- function(identifications,...) {
@@ -1335,17 +1354,17 @@ read.mzid <- function(filename) {
 
   ## Merge results of different search engines / on different spectra
   if ('SEARCHENGINE' %in% names(SC) &&                               ## search engine column is present
-      length(unique(identifications[[SC['SEARCHENGINE']]])) > 1 &&    ## there are multiple search engines defines
-      !any(grepl('^score\\.',colnames(identifications))))              ## the individual score.ENGINENAME are not present
+      n_distinct(identifications[[SC['SEARCHENGINE']]]) > 1 &&       ## there are multiple search engines defines
+      !any(grepl('^score\\.',colnames(identifications))))            ## the individual score.ENGINENAME are not present
   {
     if (any(grepl("|",identifications[[SC['SEARCHENGINE']]],fixed=TRUE))) {
-      identifications <- .dissect.search.engines(identifications)               ## dissect merged id columns
+      .dissect.search.engines(identifications)               ## dissect merged id columns
     } else {
-      identifications <- .merge.search.engine.identifications(identifications,...)  ## merge identifications
+      .merge.search.engine.identifications(identifications,...)  ## merge identifications
     }
+  } else {
+    identifications
   }
-
-  return(identifications)
 }
 
 ## end MERGE IDENTIFICATIONS
