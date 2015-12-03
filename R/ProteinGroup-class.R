@@ -582,6 +582,62 @@ getProteinInfoFromBioDb <- function(x,...,con=NULL) {
   return(res)
 }
 
+# reads FASTA files
+# with sequence tags in Uniprot format
+# and converts them to a data frame
+readUniprotFasta <- function(fasta_file=NULL, append.splicevar1=TRUE) {
+  library(Biostrings)
+
+  seq.fasta <- readAAStringSet(fasta_file)
+  seq.matches <- regexec( "(sp|tr)\\|([^|]+)\\|([A-Za-z0-9_]+)\\s(.+)\\sOS=([^=]+)(?:\\sGN=([^=]+))?(?:\\sPE=([^=]+)\\sSV=([^=]+))?",
+                          names(seq.fasta) )
+  pre_df <- regmatches(names(seq.fasta), seq.matches)
+  non_matched_mask <- sapply(pre_df, length) == 0
+  if (any(non_matched_mask)) {
+    warning("Following sequences names not parsed: ", paste0(names(seq.fasta)[non_matched_mask], collapse = ' '))
+  }
+  max_cols <- max(sapply(pre_df, length))
+  pre_df <- lapply(pre_df, function(matches) if (length(matches)<max_cols) c(matches, rep.int(NA, max_cols - length(matches))) else matches )
+  res.df <- do.call(rbind, pre_df) %>% as.data.frame(stringsAsFactors=FALSE)
+  colnames(res.df) <- c("src", "db", "accession", "name", "protein_name", "organism", "gene_name", "PE", "SV")[1:ncol(res.df)]
+  for (col in colnames(res.df)) {
+      res.df[[col]] <- ifelse(res.df[[col]] != "", res.df[[col]], NA)
+  }
+  res.df <- mutate( res.df, length = Biostrings::nchar(seq.fasta),
+                            sequence = as.character(seq.fasta),
+                            ac_nosplicevar = sub("-[0-9]+$", "", accession),
+                            splicevar = as.integer(substring(accession, nchar(ac_nosplicevar)+2)) )
+  if (append.splicevar1) {
+    splicevar1.df <- group_by(res.df, ac_nosplicevar) %>%
+      dplyr::summarize( has_nosplicevar = any(is.na(splicevar)),
+                        has_splicevar1 = any(!is.na(splicevar) & splicevar == 1) ) %>%
+      dplyr::filter( has_nosplicevar & !has_splicevar1 )
+    if (nrow(splicevar1.df)>0) {
+      res.df <- rbind_list(res.df,
+          semi_join(res.df, splicevar1.df) %>% dplyr::filter(is.na(splicevar)) %>%
+          mutate(splicevar = 1,
+                 accession = paste0(accession, "-1"))
+      )
+    }
+  }
+  as.data.frame(res.df)
+}
+
+# Get the protein sequance and information from FASTA files with sequence tags in UniProt format
+getProteinInfoFromFasta <- function(x, fasta=NULL, has.splice.variants=TRUE, append.splicevar1=has.splice.variants) {
+  seq.df <- readUniprotFasta(fasta, append.splicevar1=append.splicevar1)
+  protein.acs <- if (is.character(x)) x else {
+      if (has.splice.variants) {
+        names(indistinguishableProteins(x))
+      } else {
+        x@isoformToGeneProduct[names(indistinguishableProteins(x)),"proteinac.wo.splicevariant"]
+      }
+  }
+  res <- dplyr::filter(seq.df, accession %in% protein.acs)
+  attr(res,"on.splice.variant") <- has.splice.variants
+  return(res)
+}
+
 getPtmInfoFromPhosphoSitePlus <- function(protein.group,file.name=NULL,modif="PHOS",
                                           psp.url="http://www.phosphosite.org/downloads/",
                                           mapping=c(PHOS="Phosphorylation_site_dataset.gz",

@@ -14,7 +14,7 @@ Maintainer: Florian P Breitwieser <florian.bw@gmail.com>
 biocViews: Proteomics, MassSpectrometry, Bioinformatics, MultipleComparisons, QualityControl
 Depends: R (>= 3.1.0), Biobase, stats, methods
 Imports: distr, dplyr, Matrix
-Suggests: MSnbase, OrgMassSpecR, XML, biomaRt, ggplot2, RJSONIO, Hmisc, gplots, RColorBrewer, gridExtra, limma, boot, distr, DBI, MASS
+Suggests: MSnbase, OrgMassSpecR, XML, biomaRt, ggplot2, RJSONIO, Hmisc, gplots, RColorBrewer, gridExtra, limma, boot, distr, DBI, MASS, Biostrings
 LazyLoad: yes
 License: LGPL-2
 URL: http://www.ms-isobar.org
