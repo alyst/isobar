@@ -302,8 +302,10 @@ number.ranges <- function(numbers) {
 }
 
 .get.cmbn <- function(combn,tags,cl,ptn=NULL) {
-  if (!all(unlist(combn) %in% cl))
-    stop("incorrect combn specification")
+  if (!all(unlist(combn) %in% cl)) {
+    stop("incorrect class.pairs specification: no channels annotated with ",
+         paste0("'",setdiff(unique(unlist(combn)), unique(cl)),"'",collapse=", "))
+  }
 
   combn_df <- data.frame(
     class1 = sapply(combn, function(cc) cc[1]),
