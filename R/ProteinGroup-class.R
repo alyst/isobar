@@ -112,7 +112,9 @@ setMethod("ProteinGroup",signature(from="data.frame",template="ProteinGroup",pro
 
       attr(proteinInfo,"on.splice.variant") <- attr(template@proteinInfo,"on.splice.variant")
 
-      message("done")
+      message("done, ", nrow(peptideSpecificity), " peptide(s), ",
+              nrow(subset(protein.group.table, is.reporter & `n.reporter-specific` > 0)),
+              " protein group(s)")
 
       return(
           new("ProteinGroup",
