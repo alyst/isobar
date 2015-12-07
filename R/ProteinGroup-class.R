@@ -96,11 +96,16 @@ setMethod("ProteinGroup",signature(from="data.frame",template="ProteinGroup",pro
       peptideSpecificity <-
         peptideSpecificity(template)[peptideSpecificity(template)[["peptide"]] %in% from$peptide,]
       spectrumId <- unique(from[,setdiff(colnames(from),c("protein","start.pos"))])
-      spectrumToPeptide <- spectrumToPeptide(template)[
-                     names(spectrumToPeptide(template)) %in% from$spectrum]
+      spectrumToPeptide <- dplyr::select(from, spectrum, peptide) %>% dplyr::distinct() %>%
+                            dplyr::semi_join(data.frame(peptide = unique(as.character(spectrumToPeptide(template))),
+                                             stringsAsFactors = FALSE)) %>% .as.vect()
 
       isoforms <-template@isoformToGeneProduct[names(indistinguishableProteins),]
-      peptideInfo <- template@peptideInfo[template@peptideInfo$peptide %in% from$peptide & template@peptideInfo$modif %in% from$modif,]
+      peptideInfo <- select_(template@peptideInfo, .dots=intersect(c("protein","peptide","start.pos","aa.before","aa.after","real.peptide"),colnames(template@peptideInfo))) %>%
+              dplyr::distinct() %>%
+              dplyr::inner_join(dplyr::select(from, peptide, modif) %>% dplyr::distinct()) %>%
+              dplyr::arrange(protein, start.pos, peptide)
+
       ## TODO: overlappingProteins are missing
 
       if (length(proteinInfo) == 0 && length(template@proteinInfo) > 0) {
