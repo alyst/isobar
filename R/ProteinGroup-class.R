@@ -78,7 +78,7 @@ setMethod("ProteinGroup",signature(from="data.frame",template="ProteinGroup",pro
         stop("Not all required columns ['spectrum','peptide','modif','accession' or 'protein'] present:\n",
              paste(required.cols[!required.cols.present],collapse=" and ")," missing")
       }
-      if (!'start.pos' %in% colnames(from)) {
+      if (nrow(from) > 0 && !('start.pos' %in% colnames(from))) {
         warning('start.pos not in supplied data.frame, setting to NA')
         from$start.pos <- NA
       }
@@ -191,7 +191,7 @@ setMethod("ProteinGroup",signature(from="data.frame",template="missing",proteinI
         stop("Not all required columns ['spectrum','peptide','modif','accession' or 'protein'] present:\n",
              paste(required.cols[!required.cols.present],collapse=" and ")," missing")
       }
-      if (!'start.pos' %in% colnames(from)) {
+      if (nrow(from) > 0 && !('start.pos' %in% colnames(from))) {
         warning('start.pos not in supplied data.frame, setting to NA')
         from$start.pos <- NA
       }
