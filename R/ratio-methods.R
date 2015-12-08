@@ -395,6 +395,7 @@ calculate.mult.sample.pvalue <- function(lratio,ratiodistr,strict.pval,lower.tai
 }
 
 adjust.ratio.pvalue <- function(quant.tbl,p.adjust,sign.level,globally=FALSE) {
+  attrs <- attributes(quant.tbl)
   if (globally) {
     quant.tbl <- mutate(quant.tbl,
                         p.value.rat.adjusted = p.adjust(p.value.rat, p.adjust),
@@ -408,6 +409,7 @@ adjust.ratio.pvalue <- function(quant.tbl,p.adjust,sign.level,globally=FALSE) {
              p.value.adjusted = p.adjust(p.value, p.adjust)) %>%
       ungroup() %>% mutate(is.significant = is.significant & p.value.adjusted <= sign.level)
   }
+  attributes(quant.tbl) <- attrs
   quant.tbl
 }
 
