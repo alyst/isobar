@@ -7,7 +7,7 @@ suppressPackageStartupMessages(require(ggplot2))
 suppressPackageStartupMessages(library(isobar))
 suppressPackageStartupMessages(library(grid))
 suppressPackageStartupMessages(library(gridExtra))
-suppressPackageStartupMessages(library(plyr))
+suppressPackageStartupMessages(library(dplyr))
 options(encoding="UTF-8")
 pdf.options(pointsize=6)
 
@@ -243,10 +243,10 @@ if (!is.null(ratiodistr)) {
 }
 
 gg <- grid.arrange(g,
-tableGrob(ddply(quant.tbl,c('channels','class2','class1')[c('channels','class2','class1') %in% colnames(quant.tbl)],
-                 function(x) c('number of ratios'=sum(!is.na(x$lratio)),
-                               'significantly\ndownregulated'=sum(x$is.significant[x$lratio<0],na.rm=TRUE),
-                               'significantly\nupregulated'=sum(x$is.significant[x$lratio>0],na.rm=TRUE))),
+tableGrob(dplyr::group_by_(quant.tbl, c('channels', 'class2', 'class1')[c('channels','class2','class1') %in% colnames(quant.tbl)]) %>%
+          dplyr::summarize(`number of ratios`=sum(!is.na(lratio)),
+                           `significantly\ndownregulated`=sum(is.significant & lratio<0, na.rm=TRUE),
+                           `significantly\nupregulated`=sum(is.significant & lratio>0, na.rm=TRUE)),
           theme=ttheme_default(core=list(fg_params=list(fontsize=9)),
                                colhead=list(fg_params=list(fontsize=10)),
                                rowhead=list(fg_params=list(fontsize=10)))),
@@ -275,8 +275,8 @@ dev.off()
 #\section{Ratio Variance Plot}
 #if (ep("preselected.proteins"))
 
-quant.tbl <- merge(quant.tbl,ddply(quant.tbl,"sign.string",nrow),all.x=TRUE,by="sign.string")
-quant.tbl$sign <- paste(quant.tbl$sign.string,": ",quant.tbl$V1,sep="")
+quant.tbl <- dplyr::group_by(quant.tbl, sign.string) %>% mutate(n_same = n()) %>% ungroup() %>%
+             dplyr::mutate(sign = paste0(sign.string,": ",n_same))
 #message(paste(unique(quant.tbl$sign),collapse="\n"))
 
 g <- ggplot(quant.tbl,aes(x=lratio,y=sqrt(variance))) +

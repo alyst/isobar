@@ -1,7 +1,6 @@
 #!/usr/bin/Rscript
 
 suppressPackageStartupMessages(library(isobar))
-suppressPackageStartupMessages(library(plyr))
 
 all.files <- commandArgs(TRUE)
 if (length(all.files) < 2)
@@ -14,5 +13,5 @@ message("reading MSGF files:")
 message("\t",paste(msgfp.files,collapse="\n\t"))
 
 ib.df <- ldply(msgfp.files,isobar:::.read.msgfp.tsv)
-ib.df <- ib.df[ib.df[,'msgf.specevalue'] <= 0.05 & ib.df[,'msgf.rawscore'] > 0,]
+ib.df <- ib.df[ib.df$msgf.specevalue <= 0.05 & ib.df$msgf.rawscore > 0,]
 writeIBSpectra(ib.df,file=out.file,quote=FALSE)
