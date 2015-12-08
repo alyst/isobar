@@ -1255,7 +1255,7 @@ proteinRatios <-
 
   attributes(ratios) = c(attributes(ratios),list(
                          classLabels=cl,combn.method=combn.method,symmetry=symmetry,summarize=FALSE,
-                         sign.level.rat=sign.level.rat,sign.level.sample=sign.level.sample,
+                         sign.level=sign.level, sign.level.rat=sign.level.rat, sign.level.sample=sign.level.sample,
                          ratiodistr=ratiodistr,variance.function=variance.function,
                           combine=combine,p.adjust=p.adjust,reverse=reverse))
 
