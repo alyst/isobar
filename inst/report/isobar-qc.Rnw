@@ -220,7 +220,7 @@ if (!is.null(ratiodistr)) {
 
 <<reporter-intensities-2,fig=TRUE,width=6.5,height=4.5,echo=F,results=hide>>=
 if (all(c("class1","class2") %in% colnames(quant.tbl)) &&
-    (!all(quant.tbl[,'class1']==quant.tbl[,'r1']))) {
+    (!all(quant.tbl$class1==quant.tbl$r1))) {
   quant.tbl$comp <- sprintf("%s [%s] /\n %s [%s]",
                             quant.tbl$r2,quant.tbl$class2,
                             quant.tbl$r1,quant.tbl$class1)
@@ -243,7 +243,7 @@ if (!is.null(ratiodistr)) {
 }
 
 gg <- grid.arrange(g,
-tableGrob(dplyr::group_by_(quant.tbl, c('channels', 'class2', 'class1')[c('channels','class2','class1') %in% colnames(quant.tbl)]) %>%
+tableGrob(dplyr::group_by_(quant.tbl, .dots = intersect(colnames(quant.tbl), c('channels', 'class2', 'class1'))) %>%
           dplyr::summarize(`number of ratios`=sum(!is.na(lratio)),
                            `significantly\ndownregulated`=sum(is.significant & lratio<0, na.rm=TRUE),
                            `significantly\nupregulated`=sum(is.significant & lratio>0, na.rm=TRUE)),
