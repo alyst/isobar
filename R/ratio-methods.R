@@ -409,7 +409,9 @@ adjust.ratio.pvalue <- function(quant.tbl,p.adjust,sign.level,globally=FALSE) {
              p.value.adjusted = p.adjust(p.value, p.adjust)) %>%
       ungroup() %>% mutate(is.significant = is.significant & p.value.adjusted <= sign.level)
   }
-  attributes(quant.tbl) <- attrs
+  attrs$names <- colnames(quant.tbl)
+  attrs$row.names <- rownames(quant.tbl)
+  attributes(quant.tbl) <- attrs # restore attributes
   quant.tbl
 }
 
