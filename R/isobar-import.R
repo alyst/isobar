@@ -409,6 +409,8 @@ setMethod("readIBSpectra",
                               scan.lines,fragment.precision,fragment.outlier.prob,
                               id.data=id.file)
       preinit = .preinitialize.IBSpectra(type,identifications=id.file,
+                                         fragment.precision=fragment.precision,
+                                         fragment.outlier.prob=fragment.outlier.prob,
                                          data.mass=quant$data.mass,
                                          data.ions=quant$data.ions, ...)
       new(type,
