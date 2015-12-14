@@ -117,6 +117,8 @@
         }
       }
     }
+  } else {
+    warning("No 'fragment.precision' specified, reporter masses not filtered")
   }
 
   assayDataElements$ions[which(assayDataElements$ions==0)] <- NA
